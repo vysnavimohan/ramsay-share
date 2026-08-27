@@ -1,0 +1,138 @@
+{
+  "source_id": "01f19b8fda6e1045ba3a1e5b257e8ee3",
+  "display_name": "Ramsay Workforce \u2014 Nurse Replacement",
+  "description": "Conversational workforce/rostering assistant for Ramsay Health Care UK: find shift-cover replacements and quantify agency-cost savings.",
+  "table_identifiers": [
+    "ramsay_workforce.allocate.cover_decisions",
+    "ramsay_workforce.allocate.dim_grade_payrate",
+    "ramsay_workforce.allocate.dim_site",
+    "ramsay_workforce.allocate.dim_site_synonym",
+    "ramsay_workforce.allocate.mv_absence",
+    "ramsay_workforce.allocate.mv_shift_fulfilment",
+    "ramsay_workforce.allocate.vw_open_gaps",
+    "ramsay_workforce.allocate.vwah_hoursassignment",
+    "ramsay_workforce.allocate.vwah_unavailability"
+  ],
+  "instructions": [
+    {
+      "title": "Workforce context & rules",
+      "content": "This Space helps Ramsay Health Care UK operations managers cover nursing shift gaps and cut temporary-agency spend across our UK hospitals.\nGRADES: RN=Registered Nurse, SnrRN=Senior Registered Nurse, HCA=Health Care Assistant, HOC=Head of Clinical Services, A&C=Administrative & Clerical, MedSec=Medical Secretary. WTE=Whole Time Equivalent. EmployeeTypeName: Employee (substantive), Bank Only (internal bank), Agency (external temp).\nKEY RULE: an agency/temp nurse costs ~3-4x a permanent staff member. Filling a gap internally (Employee or Bank) instead of Agency saves that premium. Prefer Employee, then Bank Only, then Agency.\nA gap = a future shift that is Unfilled OR a shift whose assigned staff is on approved sickness/leave overlapping the shift date; use vw_open_gaps.\n'Available' to cover a gap = same grade, NOT already rostered that date, NOT on approved unavailability that date; rank by proximity (distance_km) then contract (Employee<Bank<Agency) then least hours worked last 7 days.\nCOST/FILL: always use metric views. mv_shift_fulfilment: fill_rate, agency_cost, agency_premium (GBP waste vs permanent), planned_agency_hours. mv_absence: absence_events, sickness_hours, lost_hours, rtw_completion_rate. Query with MEASURE(name).\nTo find who can cover a specific gap use fn_find_replacements(<HoursAssignmentID>).",
+      "instruction_type": "TEXT_INSTRUCTION"
+    },
+    {
+      "title": "Which shifts are unfilled or affected by sickness in the next 7 days?",
+      "content": "SELECT SiteName, Grade, ShiftDate, ShiftName, GapReason, agency_cost_if_unfilled, saving_if_filled_internally FROM ramsay_workforce.allocate.vw_open_gaps WHERE ShiftDate <= current_date()+7 ORDER BY agency_cost_if_unfilled DESC",
+      "instruction_type": "SQL_INSTRUCTION"
+    },
+    {
+      "title": "Who can cover the unfilled shift with HoursAssignmentID 5003086?",
+      "content": "SELECT Name, Grade, EmployeeType, HomeSite, distance_km, hours_last_7d, saving_vs_agency FROM ramsay_workforce.allocate.fn_find_replacements(5003086)",
+      "instruction_type": "SQL_INSTRUCTION"
+    },
+    {
+      "title": "How much agency premium are we spending by site?",
+      "content": "SELECT Site, MEASURE(agency_premium) AS agency_premium, MEASURE(agency_cost) AS agency_cost, MEASURE(fill_rate) AS fill_rate FROM ramsay_workforce.allocate.mv_shift_fulfilment GROUP BY Site ORDER BY agency_premium DESC",
+      "instruction_type": "SQL_INSTRUCTION"
+    },
+    {
+      "title": "What is the sickness absence broken down by reason group?",
+      "content": "SELECT ReasonGroup, MEASURE(absence_events) AS events, MEASURE(sickness_hours) AS sickness_hours, MEASURE(lost_hours) AS lost_hours FROM ramsay_workforce.allocate.mv_absence GROUP BY ReasonGroup ORDER BY events DESC",
+      "instruction_type": "SQL_INSTRUCTION"
+    },
+    {
+      "title": "What would we save this week if all coverable gaps were filled internally instead of by agency?",
+      "content": "SELECT SUM(saving_if_filled_internally) AS total_saving_gbp, COUNT(*) AS coverable_gaps FROM ramsay_workforce.allocate.vw_open_gaps WHERE ShiftDate <= current_date()+7",
+      "instruction_type": "SQL_INSTRUCTION"
+    },
+    {
+      "title": "Column value glossary \u2014 use exact literals",
+      "content": "CRITICAL literal values. Never invent or abbreviate these; a wrong literal returns 0 rows silently.\nvw_open_gaps.GapReason is EITHER the exact string 'Unfilled Shift' (a roster vacancy) OR starts with 'Sickness/Leave: ' followed by the absent person's name. There is NO value 'Unfilled' \u2014 to find roster vacancies use GapReason = 'Unfilled Shift', and for absence-driven gaps use GapReason LIKE 'Sickness/Leave:%'.\nvwah_hoursassignment.FulfillmentStatusName is one of 'Filled', 'Unfilled', 'PartFilled'.\nEmployeeTypeName is one of 'Employee', 'Bank Only', 'Agency'.\nUnavailabilityReasonGroup is one of 'Sickness', 'AnnualLeave', 'StudyLeave', 'Other'.\nUnavailabilityState is 'Approved' or 'Cancelled' \u2014 always filter to 'Approved' for real absence.\nALWAYS scope gap questions to the future with ShiftDate >= current_date(); the roster also holds ~60 days of history, so omitting it mixes past and future and inflates counts.",
+      "instruction_type": "TEXT_INSTRUCTION"
+    },
+    {
+      "title": "Absence hours \u2014 which measure to use",
+      "content": "In mv_absence, sickness_hours is populated ONLY for ReasonGroup='Sickness' and is 0 for AnnualLeave, StudyLeave and Other. For total time lost across ALL reasons use lost_hours. Use sickness_hours only when the question is specifically about sickness.",
+      "instruction_type": "TEXT_INSTRUCTION"
+    },
+    {
+      "title": "Staff identity \u2014 names are not unique",
+      "content": "StaffNumber is the unique staff identifier. Person NAMES ARE NOT UNIQUE \u2014 108 names are shared by multiple staff (e.g. three different people are called 'Grace Taylor'). Always group, join, count and de-duplicate on StaffNumber, never on the name. When listing people, show StaffNumber alongside the name.",
+      "instruction_type": "TEXT_INSTRUCTION"
+    },
+    {
+      "title": "Which proposed replacements are at risk of breaching the 48-hour Working Time Directive?",
+      "content": "SELECT r.Name, r.StaffNumber, r.Grade, r.hours_last_7d, r.wtd_ok\nFROM ramsay_workforce.allocate.fn_find_replacements(5003086) r\nORDER BY r.hours_last_7d DESC",
+      "instruction_type": "SQL_INSTRUCTION"
+    },
+    {
+      "title": "How many gaps are roster vacancies versus caused by sickness or leave?",
+      "content": "SELECT CASE WHEN GapReason = 'Unfilled Shift' THEN 'Roster vacancy' ELSE 'Sickness / leave' END AS gap_type,\n       COUNT(*) AS gaps, ROUND(SUM(agency_cost_if_unfilled)) AS agency_cost_if_unfilled\nFROM ramsay_workforce.allocate.vw_open_gaps\nWHERE ShiftDate >= current_date()\nGROUP BY 1 ORDER BY gaps DESC",
+      "instruction_type": "SQL_INSTRUCTION"
+    },
+    {
+      "title": "Which open gaps have NO compliant internal cover available?",
+      "content": "SELECT SiteName, Grade, ShiftDate, ShiftName, GapReason, agency_cost_if_unfilled, compliant_options\nFROM ramsay_workforce.allocate.vw_gap_cover_status\nWHERE ShiftDate >= current_date() AND NOT has_internal_cover\nORDER BY agency_cost_if_unfilled DESC",
+      "instruction_type": "SQL_INSTRUCTION"
+    },
+    {
+      "title": "Internal cover availability \u2014 use vw_gap_cover_status",
+      "content": "To answer whether a gap CAN be covered internally, use the view ramsay_workforce.allocate.vw_gap_cover_status. It extends vw_open_gaps with compliant_options (count of grade-matched, available, Working-Time-Directive-compliant internal staff) and the boolean has_internal_cover. NEVER call fn_find_replacements inside a WHERE/NOT EXISTS clause correlated to another table \u2014 it is a TABLE function and Spark rejects correlated table-function calls. Use fn_find_replacements ONLY in the FROM clause with a single literal HoursAssignmentID, to list candidates for ONE named gap.",
+      "instruction_type": "TEXT_INSTRUCTION"
+    },
+    {
+      "title": "Leave & absence glossary (READ FIRST for any leave question)",
+      "content": "LEAVE vs SICKNESS: table vwah_unavailability holds BOTH planned leave and sickness in UnavailabilityReasonGroup (values: 'AnnualLeave','StudyLeave','Other','Sickness'). These are DIFFERENT workforce levers \u2014 NEVER blend them into one 'on leave' number without labelling.\n- 'On leave' / 'planned leave' = UnavailabilityReasonGroup IN ('AnnualLeave','StudyLeave','Other'). Exclude 'Sickness'.\n- 'Off sick' / 'absence' = UnavailabilityReasonGroup='Sickness'.\n- When a user just says 'on leave', return BOTH broken out (planned leave count AND sickness count), and state which is which, so answers to 'who is on leave' and 'how many on leave' always reconcile.\nDATE SEMANTICS (use ValidDate, one row per staff per day):\n- 'currently' / 'today' / 'right now' = ValidDate = current_date().\n- 'will be' / 'upcoming' / 'scheduled' = ValidDate >= current_date().\nAlways also filter UnavailabilityState='Approved' AND DeletedFlag=false. Count people with COUNT(DISTINCT StaffNumber).",
+      "instruction_type": "TEXT_INSTRUCTION"
+    },
+    {
+      "title": "Who is currently on leave today (planned leave and sickness, broken out)?",
+      "content": "SELECT UnavailabilityReasonGroup, COUNT(DISTINCT StaffNumber) AS staff, collect_list(concat(Forenames,' ',Surname,' (',StaffNumber,')')) AS people\nFROM ramsay_workforce.allocate.vwah_unavailability\nWHERE UnavailabilityState='Approved' AND DeletedFlag=false AND ValidDate = current_date()\n  AND UnavailabilityReasonGroup IN ('AnnualLeave','StudyLeave','Other','Sickness')\nGROUP BY UnavailabilityReasonGroup ORDER BY staff DESC",
+      "instruction_type": "SQL_INSTRUCTION"
+    },
+    {
+      "title": "ALWAYS clarify hospital + time frame for leave/cover/gap questions",
+      "content": "SCOPE CLARIFICATION (apply to every question about leave, sickness, absence, gaps, or replacements):\n1. HOSPITAL: if the user did NOT name a hospital/site, ASK which hospital they mean before answering, and list the options. The 8 sites are: Pinehill (SITE001, Basingstoke), Oaks Manchester (SITE002), Springfield Chelmsford (SITE003), Fitzwilliam Peterborough (SITE004), Euxton Hall Chorley (SITE005), Rivers Sawbridgeworth (SITE006), Woodthorpe Sheffield (SITE007), Berkshire Reading (SITE008). Offer 'all hospitals' as an option. If they say all, aggregate across sites.\n2. TIME FRAME: if the user did NOT give a time frame, ASK for one before answering \u2014 offer today, next 7 days, next 30 days. Map: 'today/currently' -> ValidDate = current_date(); a horizon 'next N days' -> ValidDate BETWEEN current_date() AND current_date()+N; 'upcoming' with no number -> ValidDate >= current_date().\nOnly skip the clarifying question if the user's message already specifies that dimension. Always resolve SiteID to the hospital SiteName via join to ramsay_workforce.allocate.dim_site and DISPLAY the hospital name (never the raw SITE00x code) in answers.",
+      "instruction_type": "TEXT_INSTRUCTION"
+    },
+    {
+      "title": "Hospital name matching: ALWAYS use ILIKE substring, never = (avoids 0-row bug)",
+      "content": "HOSPITAL NAME MATCHING: dim_site.SiteName holds the FULL legal names, which users never type in full. ALWAYS match hospital on a substring, not equality: use `s.SiteName ILIKE '%<keyword>%'`. Never use `s.SiteName = 'Springfield Chelmsford'` \u2014 the stored value is 'Ramsay Springfield Hospital Chelmsford' and an exact match returns ZERO rows.\nSite keyword -> full name: Pinehill='Ramsay Pinehill Hospital'; Oaks / Manchester='Ramsay Oaks Hospital Manchester'; Springfield / Chelmsford='Ramsay Springfield Hospital Chelmsford'; Fitzwilliam / Peterborough='Ramsay Fitzwilliam Hospital Peterborough'; Euxton / Chorley='Ramsay Euxton Hall Hospital Chorley'; Rivers / Sawbridgeworth='Ramsay Rivers Hospital Sawbridgeworth'; Woodthorpe / Sheffield='Ramsay Woodthorpe Hospital Sheffield'; Berkshire / Reading='Ramsay Berkshire Independent Hospital Reading'.",
+      "instruction_type": "TEXT_INSTRUCTION"
+    },
+    {
+      "title": "Trends over time \u2014 read the caveat before answering",
+      "content": "The roster spans roughly 60 days of history plus ~45 days ahead. Month-over-month FILL RATE and UNFILLED counts are NOT a genuine performance trend: future-dated shifts are progressively less filled simply because rosters are completed closer to the shift date. A falling fill rate towards the present and future is therefore EXPECTED and is not evidence of deterioration.\nWhen asked for a trend in fill rate, unfilled shifts, or agency exposure over time:\n1) restrict to COMPLETED periods only (ValidDate < current_date()) so future months don't drag the line down, and\n2) state explicitly that the forward months are partially rostered and not comparable.\nTrends over PAST months only are valid. Never present a future-inclusive trend as a change in performance.",
+      "instruction_type": "TEXT_INSTRUCTION"
+    },
+    {
+      "title": "Absence state \u2014 cancelled absence is not absence",
+      "content": "mv_absence is already filtered to UnavailabilityState='Approved' AND DeletedFlag=false, so its measures count only real absence. When querying vwah_unavailability DIRECTLY you must add `WHERE UnavailabilityState='Approved' AND coalesce(DeletedFlag,false)=false` yourself, otherwise cancelled absences inflate the totals.",
+      "instruction_type": "TEXT_INSTRUCTION"
+    },
+    {
+      "title": "What is the fill-rate trend over completed months?",
+      "content": "SELECT date_trunc('MONTH', ValidDate) AS month, MEASURE(total_shifts) AS shifts,\n       MEASURE(fill_rate) AS fill_rate, MEASURE(agency_premium) AS agency_premium\nFROM ramsay_workforce.allocate.mv_shift_fulfilment\nWHERE ValidDate < date_trunc('MONTH', current_date())   -- completed months only\nGROUP BY 1 ORDER BY 1",
+      "instruction_type": "SQL_INSTRUCTION"
+    },
+    {
+      "title": "Hospital synonyms: resolve hospital words via dim_site_synonym",
+      "content": "HOSPITAL SYNONYMS: users refer to hospitals by city, short name, or nickname, never the full legal name. To resolve ANY hospital word to a SiteID, join ramsay_workforce.allocate.dim_site_synonym: match the user's word against `alias` (lowercase; use LOWER(<word>) = syn.alias, or syn.alias ILIKE the word). That gives SiteID, then join dim_site for the display SiteName. Prefer this over guessing an ILIKE on SiteName. Aliases include e.g. springfield/chelmsford/essex -> SITE003; oaks/manchester -> SITE002; berkshire/reading -> SITE008; euxton/chorley -> SITE005; fitzwilliam/peterborough -> SITE004; pinehill/basingstoke -> SITE001; rivers/sawbridgeworth -> SITE006; woodthorpe/sheffield -> SITE007.",
+      "instruction_type": "TEXT_INSTRUCTION"
+    },
+    {
+      "title": "Replacement/cover requests: REQUIRE hospital + grade + date(s), ASK if missing",
+      "content": "When a user asks who they can reach out to for a REPLACEMENT / cover, they must specify THREE things: (1) which HOSPITAL, (2) the nurse GRADE (RN, SnrRN, HCA, HOC, A&C, MedSec), and (3) the DATE or date range of the shift. If ANY is missing, ASK for the missing one(s) BEFORE querying \u2014 do NOT assume today's date and do NOT ask for a HoursAssignmentID.\nResolve the hospital via dim_site_synonym (LOWER(user word)=alias), never SiteName equality. A candidate is ELIGIBLE only if ALL hold:\n- grade matches (PersonGradeShortName); EmployeeTypeName <> 'Agency'; StaffNumber IS NOT NULL; home hospital = requested hospital.\n- NOT on approved unavailability (leave/sickness) on any day in the window (vwah_unavailability, State='Approved', DeletedFlag=false, ValidDate in range).\n- 8h+ REST: exclude anyone with a rostered shift ending <8h before window start or starting <8h after window end (cast ShiftStartDate/ShiftEndDate to TIMESTAMP).\n- NO RECENT SUBSTITUTION: exclude anyone in cover_decisions with assigned_staff_number=StaffNumber AND decided_at >= current_date()-INTERVAL 30 DAYS.\nROW LIMIT POLICY:\n- If exactly ONE hospital is in scope, return at most the TOP 5 candidates (LIMIT 5), ranked Employee before Bank then Name.\n- If the question covers ALL hospitals or MORE THAN ONE hospital, return the TOP 5 PER HOSPITAL, not 5 overall \u2014 use ROW_NUMBER() OVER (PARTITION BY Hospital ORDER BY CASE EmployeeType WHEN 'Employee' THEN 1 WHEN 'Bank Only' THEN 2 ELSE 3 END, Name) and keep rows where the rank <= 5.\nDo NOT exclude staff just for having roster rows in general \u2014 only the specific 8h rest overlap. Display the hospital SiteName.",
+      "instruction_type": "TEXT_INSTRUCTION"
+    },
+    {
+      "title": "Who can I reach out to for a replacement at <hospital> for a <grade> nurse between <start> and <end>?",
+      "content": "SELECT DISTINCT CONCAT(a.Forenames,' ',a.Surname) AS Name, a.StaffNumber, a.PersonGradeShortName AS Grade, a.EmployeeTypeName AS EmployeeType, d.SiteName AS Hospital\nFROM ramsay_workforce.allocate.vwah_hoursassignment a\nJOIN ramsay_workforce.allocate.dim_site_synonym syn ON LOWER('Springfield') = syn.alias\nJOIN ramsay_workforce.allocate.dim_site d ON a.SiteID = d.SiteID AND d.SiteID = syn.SiteID\nWHERE a.PersonGradeShortName='RN' AND a.EmployeeTypeName<>'Agency' AND a.StaffNumber IS NOT NULL\n  AND NOT EXISTS (SELECT 1 FROM ramsay_workforce.allocate.vwah_unavailability u WHERE u.StaffNumber=a.StaffNumber AND u.UnavailabilityState='Approved' AND u.DeletedFlag=false AND u.ValidDate BETWEEN DATE'2026-08-25' AND DATE'2026-08-29')\n  AND NOT EXISTS (SELECT 1 FROM ramsay_workforce.allocate.vwah_hoursassignment x WHERE x.StaffNumber=a.StaffNumber AND try_cast(x.ShiftEndDate AS TIMESTAMP) > DATE'2026-08-25' - INTERVAL 8 HOURS AND try_cast(x.ShiftStartDate AS TIMESTAMP) < DATE'2026-08-29' + INTERVAL 1 DAY + INTERVAL 8 HOURS)\n  AND NOT EXISTS (SELECT 1 FROM ramsay_workforce.allocate.cover_decisions c WHERE c.assigned_staff_number=a.StaffNumber AND c.decided_at >= current_date() - INTERVAL 30 DAYS)\nORDER BY CASE EmployeeType WHEN 'Employee' THEN 1 WHEN 'Bank Only' THEN 2 ELSE 3 END, Name\nLIMIT 5",
+      "instruction_type": "SQL_INSTRUCTION"
+    },
+    {
+      "title": "Who can I reach out to for a replacement across all hospitals (top 5 per hospital)?",
+      "content": "WITH eligible AS (\n  SELECT DISTINCT CONCAT(a.Forenames,' ',a.Surname) AS Name, a.StaffNumber, a.PersonGradeShortName AS Grade, a.EmployeeTypeName AS EmployeeType, d.SiteName AS Hospital\n  FROM ramsay_workforce.allocate.vwah_hoursassignment a\n  JOIN ramsay_workforce.allocate.dim_site d ON a.SiteID = d.SiteID\n  WHERE a.PersonGradeShortName='RN' AND a.EmployeeTypeName<>'Agency' AND a.StaffNumber IS NOT NULL\n    AND NOT EXISTS (SELECT 1 FROM ramsay_workforce.allocate.vwah_unavailability u WHERE u.StaffNumber=a.StaffNumber AND u.UnavailabilityState='Approved' AND u.DeletedFlag=false AND u.ValidDate BETWEEN DATE'2026-08-25' AND DATE'2026-08-29')\n    AND NOT EXISTS (SELECT 1 FROM ramsay_workforce.allocate.vwah_hoursassignment x WHERE x.StaffNumber=a.StaffNumber AND try_cast(x.ShiftEndDate AS TIMESTAMP) > DATE'2026-08-25' - INTERVAL 8 HOURS AND try_cast(x.ShiftStartDate AS TIMESTAMP) < DATE'2026-08-29' + INTERVAL 1 DAY + INTERVAL 8 HOURS)\n    AND NOT EXISTS (SELECT 1 FROM ramsay_workforce.allocate.cover_decisions c WHERE c.assigned_staff_number=a.StaffNumber AND c.decided_at >= current_date() - INTERVAL 30 DAYS)),\nranked AS (SELECT *, ROW_NUMBER() OVER (PARTITION BY Hospital ORDER BY CASE EmployeeType WHEN 'Employee' THEN 1 WHEN 'Bank Only' THEN 2 ELSE 3 END, Name) AS rn FROM eligible)\nSELECT Hospital, Name, StaffNumber, Grade, EmployeeType FROM ranked WHERE rn <= 5 ORDER BY Hospital, rn",
+      "instruction_type": "SQL_INSTRUCTION"
+    }
+  ]
+}

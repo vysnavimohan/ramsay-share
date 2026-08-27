@@ -1,0 +1,262 @@
+{
+  "source": {
+    "catalog": "ramsay_health",
+    "schema": "ops"
+  },
+  "deliverables": [
+    "ramsay-ai-supervisor (app)",
+    "Ramsay Health \u2014 Group Operations (5 Hospitals) (dashboard)"
+  ],
+  "seeds": [
+    "dim_site",
+    "fact_bed_day",
+    "fact_diagnostic_slot",
+    "fact_theatre_session",
+    "mv_bed_occupancy",
+    "mv_finance_margin",
+    "mv_patient_activity",
+    "mv_theatre_util",
+    "mv_workforce_hours",
+    "tbinvoice",
+    "tbreferrals",
+    "vw_bed_occupancy",
+    "vw_capacity_forecast",
+    "vw_diagnostic_capacity",
+    "vw_finance_base",
+    "vw_readmissions",
+    "vw_referral_flow",
+    "vw_theatre_throughput",
+    "vw_waiting_list"
+  ],
+  "carry_set": {
+    "dim_site": {
+      "type": "MANAGED",
+      "origin": "added_by_us",
+      "refs": []
+    },
+    "fact_bed_day": {
+      "type": "MANAGED",
+      "origin": "added_by_us",
+      "refs": []
+    },
+    "fact_diagnostic_slot": {
+      "type": "MANAGED",
+      "origin": "added_by_us",
+      "refs": []
+    },
+    "fact_theatre_session": {
+      "type": "MANAGED",
+      "origin": "added_by_us",
+      "refs": []
+    },
+    "fc_admissions": {
+      "type": "MANAGED",
+      "origin": "added_by_us",
+      "refs": []
+    },
+    "vw_bed_occupancy": {
+      "type": "VIEW",
+      "origin": "added_by_us",
+      "refs": [
+        "dim_site",
+        "fact_bed_day"
+      ]
+    },
+    "mv_bed_occupancy": {
+      "type": "METRIC_VIEW",
+      "origin": "added_by_us",
+      "refs": [
+        "vw_bed_occupancy"
+      ]
+    },
+    "tbbillvisit": {
+      "type": "MANAGED",
+      "origin": "initial_list",
+      "refs": []
+    },
+    "tbinvoice": {
+      "type": "MANAGED",
+      "origin": "initial_list",
+      "refs": []
+    },
+    "tbreferrals": {
+      "type": "MANAGED",
+      "origin": "initial_list",
+      "refs": []
+    },
+    "vw_finance_base": {
+      "type": "VIEW",
+      "origin": "added_by_us",
+      "refs": [
+        "dim_site",
+        "tbbillvisit",
+        "tbinvoice",
+        "tbreferrals"
+      ]
+    },
+    "mv_finance_margin": {
+      "type": "METRIC_VIEW",
+      "origin": "added_by_us",
+      "refs": [
+        "vw_finance_base"
+      ]
+    },
+    "tbwlmds": {
+      "type": "MANAGED",
+      "origin": "initial_list",
+      "refs": []
+    },
+    "vw_referral_flow": {
+      "type": "VIEW",
+      "origin": "added_by_us",
+      "refs": [
+        "tbreferrals",
+        "tbwlmds"
+      ]
+    },
+    "mv_patient_activity": {
+      "type": "METRIC_VIEW",
+      "origin": "added_by_us",
+      "refs": [
+        "vw_referral_flow"
+      ]
+    },
+    "vw_theatre_throughput": {
+      "type": "VIEW",
+      "origin": "added_by_us",
+      "refs": [
+        "dim_site",
+        "fact_theatre_session"
+      ]
+    },
+    "mv_theatre_util": {
+      "type": "METRIC_VIEW",
+      "origin": "added_by_us",
+      "refs": [
+        "vw_theatre_throughput"
+      ]
+    },
+    "vwah_hoursassignment": {
+      "type": "MANAGED",
+      "origin": "initial_list",
+      "refs": []
+    },
+    "mv_workforce_hours": {
+      "type": "METRIC_VIEW",
+      "origin": "added_by_us",
+      "refs": [
+        "vwah_hoursassignment"
+      ]
+    },
+    "vw_capacity_forecast": {
+      "type": "VIEW",
+      "origin": "added_by_us",
+      "refs": [
+        "dim_site",
+        "fc_admissions"
+      ]
+    },
+    "vw_diagnostic_capacity": {
+      "type": "VIEW",
+      "origin": "added_by_us",
+      "refs": [
+        "dim_site",
+        "fact_diagnostic_slot"
+      ]
+    },
+    "vw_readmissions": {
+      "type": "VIEW",
+      "origin": "added_by_us",
+      "refs": [
+        "tbreferrals"
+      ]
+    },
+    "vw_waiting_list": {
+      "type": "VIEW",
+      "origin": "added_by_us",
+      "refs": [
+        "tbwlmds"
+      ]
+    }
+  },
+  "order": [
+    "dim_site",
+    "fact_bed_day",
+    "fact_diagnostic_slot",
+    "fact_theatre_session",
+    "fc_admissions",
+    "vw_bed_occupancy",
+    "mv_bed_occupancy",
+    "tbbillvisit",
+    "tbinvoice",
+    "tbreferrals",
+    "vw_finance_base",
+    "mv_finance_margin",
+    "tbwlmds",
+    "vw_referral_flow",
+    "mv_patient_activity",
+    "vw_theatre_throughput",
+    "mv_theatre_util",
+    "vwah_hoursassignment",
+    "mv_workforce_hours",
+    "vw_capacity_forecast",
+    "vw_diagnostic_capacity",
+    "vw_readmissions",
+    "vw_waiting_list"
+  ],
+  "data_tables": [
+    "dim_site",
+    "fact_bed_day",
+    "fact_diagnostic_slot",
+    "fact_theatre_session",
+    "fc_admissions",
+    "tbbillvisit",
+    "tbinvoice",
+    "tbreferrals",
+    "tbwlmds",
+    "vwah_hoursassignment"
+  ],
+  "row_counts": {
+    "dim_site": 5,
+    "fact_bed_day": 3000,
+    "fact_diagnostic_slot": 10334,
+    "fact_theatre_session": 6312,
+    "fc_admissions": 300,
+    "tbbillvisit": 72243,
+    "tbinvoice": 66862,
+    "tbreferrals": 311166,
+    "tbwlmds": 311166,
+    "vwah_hoursassignment": 83393
+  },
+  "by_type": {
+    "MANAGED": [
+      "dim_site",
+      "fact_bed_day",
+      "fact_diagnostic_slot",
+      "fact_theatre_session",
+      "fc_admissions",
+      "tbbillvisit",
+      "tbinvoice",
+      "tbreferrals",
+      "tbwlmds",
+      "vwah_hoursassignment"
+    ],
+    "VIEW": [
+      "vw_bed_occupancy",
+      "vw_finance_base",
+      "vw_referral_flow",
+      "vw_theatre_throughput",
+      "vw_capacity_forecast",
+      "vw_diagnostic_capacity",
+      "vw_readmissions",
+      "vw_waiting_list"
+    ],
+    "METRIC_VIEW": [
+      "mv_bed_occupancy",
+      "mv_finance_margin",
+      "mv_patient_activity",
+      "mv_theatre_util",
+      "mv_workforce_hours"
+    ]
+  }
+}

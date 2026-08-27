@@ -1,0 +1,172 @@
+{
+  "source": {
+    "catalog": "ramsay_workforce",
+    "schema": "allocate"
+  },
+  "deliverables": [
+    "ramsay-shift-cover (app)",
+    "Ramsay Workforce & Absence \u2014 Executive (dashboard)",
+    "Ramsay Workforce \u2014 Nurse Replacement (Genie space)"
+  ],
+  "seeds": [
+    "cover_decisions",
+    "dim_grade_payrate",
+    "dim_site",
+    "dim_site_synonym",
+    "enriched_hoursassignment",
+    "fn_find_replacements",
+    "mv_absence",
+    "mv_gap_candidates",
+    "mv_shift_fulfilment",
+    "vw_open_gaps",
+    "vwah_hoursassignment",
+    "vwah_unavailability"
+  ],
+  "carry_set": {
+    "cover_decisions": {
+      "type": "MANAGED",
+      "origin": "added_by_us",
+      "refs": []
+    },
+    "dim_grade_payrate": {
+      "type": "MANAGED",
+      "origin": "added_by_us",
+      "refs": []
+    },
+    "dim_site": {
+      "type": "MANAGED",
+      "origin": "added_by_us",
+      "refs": []
+    },
+    "dim_site_synonym": {
+      "type": "MANAGED",
+      "origin": "added_by_us",
+      "refs": []
+    },
+    "vwah_hoursassignment": {
+      "type": "MANAGED",
+      "origin": "initial_list",
+      "refs": []
+    },
+    "vwah_unavailability": {
+      "type": "MANAGED",
+      "origin": "initial_list",
+      "refs": []
+    },
+    "enriched_hoursassignment": {
+      "type": "VIEW",
+      "origin": "added_by_us",
+      "refs": [
+        "dim_grade_payrate",
+        "dim_site",
+        "vwah_hoursassignment"
+      ]
+    },
+    "enriched_unavailability": {
+      "type": "VIEW",
+      "origin": "added_by_us",
+      "refs": [
+        "dim_site",
+        "vwah_unavailability"
+      ]
+    },
+    "vw_open_gaps": {
+      "type": "VIEW",
+      "origin": "added_by_us",
+      "refs": [
+        "enriched_hoursassignment",
+        "vwah_unavailability"
+      ]
+    },
+    "mv_gap_candidates": {
+      "type": "MATERIALIZED_VIEW",
+      "origin": "added_by_us",
+      "refs": [
+        "enriched_hoursassignment",
+        "vw_open_gaps",
+        "vwah_hoursassignment",
+        "vwah_unavailability"
+      ]
+    },
+    "mv_absence": {
+      "type": "METRIC_VIEW",
+      "origin": "added_by_us",
+      "refs": [
+        "enriched_unavailability"
+      ]
+    },
+    "mv_shift_fulfilment": {
+      "type": "METRIC_VIEW",
+      "origin": "added_by_us",
+      "refs": [
+        "enriched_hoursassignment"
+      ]
+    },
+    "fn_find_replacements": {
+      "type": "FUNCTION",
+      "origin": "added_by_us",
+      "refs": [
+        "enriched_hoursassignment",
+        "vw_open_gaps",
+        "vwah_hoursassignment",
+        "vwah_unavailability"
+      ]
+    }
+  },
+  "order": [
+    "cover_decisions",
+    "dim_grade_payrate",
+    "dim_site",
+    "dim_site_synonym",
+    "vwah_hoursassignment",
+    "vwah_unavailability",
+    "enriched_hoursassignment",
+    "enriched_unavailability",
+    "vw_open_gaps",
+    "mv_gap_candidates",
+    "mv_absence",
+    "mv_shift_fulfilment",
+    "fn_find_replacements"
+  ],
+  "data_tables": [
+    "cover_decisions",
+    "dim_grade_payrate",
+    "dim_site",
+    "dim_site_synonym",
+    "vwah_hoursassignment",
+    "vwah_unavailability"
+  ],
+  "row_counts": {
+    "cover_decisions": 0,
+    "dim_grade_payrate": 6,
+    "dim_site": 8,
+    "dim_site_synonym": 23,
+    "vwah_hoursassignment": 26924,
+    "vwah_unavailability": 862
+  },
+  "by_type": {
+    "MANAGED": [
+      "cover_decisions",
+      "dim_grade_payrate",
+      "dim_site",
+      "dim_site_synonym",
+      "vwah_hoursassignment",
+      "vwah_unavailability"
+    ],
+    "VIEW": [
+      "enriched_hoursassignment",
+      "enriched_unavailability",
+      "vw_open_gaps"
+    ],
+    "MATERIALIZED_VIEW": [
+      "mv_gap_candidates"
+    ],
+    "METRIC_VIEW": [
+      "mv_absence",
+      "mv_shift_fulfilment"
+    ],
+    "FUNCTION": [
+      "fn_find_replacements"
+    ]
+  }
+}

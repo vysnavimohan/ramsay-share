@@ -1,0 +1,120 @@
+{
+  "GENIE_THROUGHPUT_FLOW": {
+    "display_name": "Ramsay Throughput & Flow",
+    "description": "Referral-to-Treatment (RTT), waiting lists, theatre throughput, diagnostic capacity, readmissions",
+    "table_identifiers": [
+      "ramsay_health.ops.vw_referral_flow",
+      "ramsay_health.ops.vw_waiting_list",
+      "ramsay_health.ops.vw_theatre_throughput",
+      "ramsay_health.ops.vw_diagnostic_capacity",
+      "ramsay_health.ops.vw_readmissions",
+      "ramsay_health.ops.tbwlmds"
+    ],
+    "instructions": [
+      {
+        "title": "Ramsay Throughput & Flow",
+        "content": "\n## RTT & Waiting List Glossary\n- **RTT (Referral-to-Treatment)**: Days from referral received to first definitive treatment.\n- **RTT Breach**: > 18 weeks (NHS target); current 76.9% on-time rate.\n- **WaitBand**: Cohort (Within 18wk, 18-26wk, 26-52wk, 52wk+); distribution tracking.\n- **Readmission**: Same patient re-referred within 30 days of prior referral.\n\n## Available Views & Tables\n- **vw_referral_flow**: Referral volume, urgency, service, payor; use for RTT analysis\n- **vw_waiting_list**: WeeksWaiting, WaitBand, RTTBreach flags (0/1)\n- **vw_theatre_throughput**: Theatre cases, utilisation (72.8% avg), scheduled vs completed\n- **vw_diagnostic_capacity**: Modality slots booked vs capacity (80% avg util)\n- **vw_readmissions**: is_readmission=1 flags; tracks repeat referrals within 30d (7.2% rate)\n- **tbwlmds**: Waiting list management data (core table)\n\n## Example Queries\n- **RTT by site**: SELECT Site, COUNT(*) as referrals, SUM(RTTBreach) as breaches FROM ramsay_health.ops.vw_waiting_list WHERE WeeksWaiting IS NOT NULL GROUP BY Site\n- **Services with longest waits**: SELECT Service, AVG(WeeksWaiting) as avg_wait FROM ramsay_health.ops.vw_waiting_list GROUP BY Service ORDER BY avg_wait DESC\n- **Theatre cases by site (30d)**: SELECT Site, SUM(CasesCompleted) as completed FROM ramsay_health.ops.vw_theatre_throughput WHERE BedDate >= CURRENT_DATE() - 30 GROUP BY Site\n- **Diagnostic util by modality**: SELECT Modality, SUM(SlotsBooked) / SUM(SlotsCapacity) as util FROM ramsay_health.ops.vw_diagnostic_capacity GROUP BY Modality\n- **Patients by specialty and site (date-scoped)**: SELECT Site, Specialty, COUNT(*) as patients FROM ramsay_health.ops.vw_waiting_list WHERE SessionDate BETWEEN DATE'2026-09-14' AND DATE'2026-09-16' GROUP BY Site, Specialty\n- **Theatre cases by specialty by site (date-scoped)**: SELECT Site, Specialty, COUNT(*) as cases FROM ramsay_health.ops.vw_theatre_throughput WHERE Site = 'Springfield Hospital' AND SessionDate BETWEEN DATE'2026-09-14' AND DATE'2026-09-16' GROUP BY Site, Specialty\n- **Patients over 55 by service**: SELECT Service, COUNT(*) as patients FROM ramsay_health.ops.vw_waiting_list WHERE AgeAtDateOfReferral > 55 AND Service = 'Trauma and Orthopaedics' GROUP BY Service\n\n## Key Metrics\n- Avg waiting time: ~17 weeks\n- RTT on-time rate: 76.9%\n- Theatre utilisation: 72.8%\n- Diagnostics utilisation: 80%\n- Readmission rate: 7.2%\n",
+        "instruction_type": "TEXT_INSTRUCTION"
+      }
+    ],
+    "sample_questions": [
+      "What is the RTT breach percentage by site?",
+      "Which services have the longest average waiting times?",
+      "How many theatre cases have been completed by site in the last 30 days?",
+      "Show diagnostic utilisation by modality",
+      "What is the readmission rate by service?",
+      "How many patients over 55 referred for Trauma and Orthopaedics are on an admitted RTT pathway, by hospital?",
+      "What is the average wait time in weeks by site, and which sites have the most RTT breaches?",
+      "Show patients waiting by specialty and site for the week of 2026-09-14",
+      "How many theatre cases did Springfield Hospital complete between 2026-09-14 and 2026-09-16?"
+    ]
+  },
+  "GENIE_PATIENT_FINANCE": {
+    "display_name": "Ramsay Patient Activity & Finance",
+    "description": "Patients, referrals, revenue, procedures, payors, channels",
+    "table_identifiers": [
+      "ramsay_health.ops.mv_patient_activity",
+      "ramsay_health.ops.mv_finance_margin",
+      "ramsay_health.ops.vw_finance_base",
+      "ramsay_health.ops.tbreferrals",
+      "ramsay_health.ops.tbinvoice"
+    ],
+    "instructions": [
+      {
+        "title": "Ramsay Patient Activity & Finance",
+        "content": "\n## Metric Views: MUST use MEASURE() \u2014 NEVER JOIN metric views\n\nMetric views must be queried with MEASURE(`MeasureName`) + GROUP BY dimensions. Never use SELECT *.\n**CRITICAL: Metric views CANNOT be joined to other tables or CTEs. Joining will fail with METRIC_VIEW_JOIN_NOT_SUPPORTED.**\n\n### mv_patient_activity\n- **Dimensions**: Payor, Service, Site, Urgency, Referral Date\n- **Measures**: Referrals, Patients, Admissions, Avg Wait Weeks, Avg Wait Days\n- **Example (simple)**: SELECT Payor, MEASURE(`Referrals`) FROM ramsay_health.ops.mv_patient_activity GROUP BY Payor\n- **Example (with filter)**: SELECT Service, MEASURE(`Avg Wait Weeks`) FROM ramsay_health.ops.mv_patient_activity WHERE Payor='NHS' GROUP BY Service\n- **Example (period filter with subquery)**: SELECT Service, MEASURE(`Referrals`) FROM ramsay_health.ops.mv_patient_activity WHERE Referral_Date >= CURRENT_DATE() - 30 GROUP BY Service\n\n### mv_finance_margin \u2014 IMPORTANT METRIC VIEW RULES\n- **Dimensions**: Channel, Procedure Group, Site, Service, Visit Type, Invoice Date\n- **Measures**: Revenue, Cost, Margin, `Margin Pct`, Invoices, Avg Invoice Value\n- **Margin is a REAL measure** = MEASURE(`Margin`) (Revenue minus procedure cost). Margin percentage = MEASURE(`Margin Pct`). NEVER compute margin yourself by multiplying/joining other measures \u2014 always use MEASURE(`Margin`) / MEASURE(`Margin Pct`) directly.\n- **NEVER JOIN this metric view to ANYTHING** (no CTE join, no self-join, no join to a max-date subquery). Joining fails with METRIC_VIEW_JOIN_NOT_SUPPORTED. To filter by a period, put an inline scalar subquery in the WHERE clause on the `Invoice Date` dimension \u2014 do NOT create a CTE and join it.\n- **Example (top procedures by revenue)**: SELECT `Procedure Group`, MEASURE(`Revenue`) FROM ramsay_health.ops.mv_finance_margin GROUP BY `Procedure Group` ORDER BY 2 DESC\n- **CERTIFIED EXAMPLE (revenue AND margin by procedure group and site for the most recent month \u2014 CORRECT, NO JOIN)**:\n  SELECT `Procedure Group`, `Site`, MEASURE(`Revenue`) AS Revenue, MEASURE(`Margin`) AS Margin, MEASURE(`Margin Pct`) AS `Margin Pct`\n  FROM ramsay_health.ops.mv_finance_margin\n  WHERE `Invoice Date` >= DATE_TRUNC('MONTH', (SELECT MAX(`Invoice Date`) FROM ramsay_health.ops.mv_finance_margin))\n  GROUP BY `Procedure Group`, `Site` ORDER BY Revenue DESC\n- **Example (revenue by procedure last month \u2014 CORRECT PATTERN)**:\n  SELECT `Procedure Group`, MEASURE(`Revenue`) FROM ramsay_health.ops.mv_finance_margin\n  WHERE `Invoice Date` >= DATE_TRUNC('MONTH', (SELECT MAX(`Invoice Date`) FROM ramsay_health.ops.mv_finance_margin))\n  GROUP BY `Procedure Group` ORDER BY 2 DESC\n- **Example (revenue by site and channel for most recent month \u2014 CORRECT PATTERN)**:\n  SELECT `Site`, `Channel`, MEASURE(`Revenue`) FROM ramsay_health.ops.mv_finance_margin\n  WHERE `Invoice Date` >= DATE_TRUNC('MONTH', (SELECT MAX(`Invoice Date`) FROM ramsay_health.ops.mv_finance_margin))\n  GROUP BY `Site`, `Channel` ORDER BY 3 DESC\n\n## Plain Views (for JOINs and complex queries)\n- **vw_finance_base**: Finance transaction base; normal SQL applies; use this for multi-table joins\n- **tbreferrals**: Core referral data; use directly in JOINs and WHERE. Columns include\n  AgeAtDateOfReferral (INT), ServiceName, PayorType, HasAdmission (1=admitted), ReferralID.\n- **tbwlmds**: waiting-list / RTT clock; join to tbreferrals on ReferralID. LocationName = hospital name.\n- **tbinvoice**: Invoice details; query with normal SQL\n\n## Cohort filtering (age / service / RTT pathway) \u2014 use tbreferrals joined to tbwlmds\n- **\"Admitted RTT pathway\"** = a referral whose RTT clock stopped on admission. In this data that is\n  `tbreferrals.HasAdmission = 1` (equivalently `tbwlmds.Subsection = 'CompletedAdmitted'`). \"Still waiting\"\n  = `tbwlmds.Subsection = 'Waiting'`.\n- **Patients over 55**: `AgeAtDateOfReferral > 55`.\n- **By hospital**: group by `tbwlmds.LocationName` (the real site name).\n- **CERTIFIED EXAMPLE \u2014 patients >55, T&O, admitted RTT pathway, by hospital**:\n  SELECT w.LocationName AS Hospital, COUNT(*) AS Patients\n  FROM ramsay_health.ops.tbreferrals r JOIN ramsay_health.ops.tbwlmds w ON r.ReferralID = w.ReferralID\n  WHERE r.AgeAtDateOfReferral > 55 AND r.ServiceName = 'Trauma and Orthopaedics' AND r.HasAdmission = 1\n  GROUP BY w.LocationName ORDER BY Patients DESC\n- **CERTIFIED EXAMPLE \u2014 arbitrary cohort (>65, Ophthalmology, still waiting), by hospital**:\n  SELECT w.LocationName AS Hospital, COUNT(*) AS Patients\n  FROM ramsay_health.ops.tbreferrals r JOIN ramsay_health.ops.tbwlmds w ON r.ReferralID = w.ReferralID\n  WHERE r.AgeAtDateOfReferral > 65 AND r.ServiceName = 'Ophthalmology' AND w.Subsection = 'Waiting'\n  GROUP BY w.LocationName ORDER BY Patients DESC\n- There is NO column literally named `RTT_Pathway`. Never invent it \u2014 express pathway status via HasAdmission / Subsection as above.\n\n## Business Context\n- **Channel**: NHS, PMI (Private Medical Insurance), Self Pay\n- **PayorType**: NHS, Private\n- **Top revenue procedure**: Orthopaedic-Hip is highest-margin specialty (\u00a338.8M revenue)\n- **Revenue**: Total InvoiceValue (gross); Invoices = count of invoice rows\n- **RTT Breach**: > 18 weeks; target <= 18 weeks for 76.9% of cases\n",
+        "instruction_type": "TEXT_INSTRUCTION"
+      }
+    ],
+    "sample_questions": [
+      "Show referrals and patients by payor type",
+      "What is the total revenue by channel?",
+      "What are the top 3 procedure groups by revenue?",
+      "How many referrals do we have by urgency?",
+      "Show average wait time in weeks by service",
+      "What is the revenue by procedure group in the most recent month?",
+      "Show revenue by site and channel for last month",
+      "What is the average revenue per referral by service?",
+      "How many patients over 55 referred for Trauma and Orthopaedics are on an admitted RTT pathway, by hospital?",
+      "How many patients over 65 referred for Ophthalmology are still waiting, by hospital?",
+      "What is the revenue and margin by procedure group and site for the most recent month?"
+    ]
+  },
+  "GENIE_WORKFORCE": {
+    "display_name": "Ramsay Workforce",
+    "description": "Staff fill rate, hours, grades, sickness, absence",
+    "table_identifiers": [
+      "ramsay_health.ops.mv_workforce_hours",
+      "ramsay_health.ops.vwah_hoursassignment",
+      "ramsay_health.ops.vwah_unavailability",
+      "ramsay_health.ops.dim_site"
+    ],
+    "instructions": [
+      {
+        "title": "Ramsay Workforce",
+        "content": "\n## Metric View: mv_workforce_hours \u2014 NEVER JOIN metric views\n\nThis is a metric view; query with MEASURE() + GROUP BY dimensions only.\n**CRITICAL: Metric views CANNOT be joined to other tables. Joining will fail with METRIC_VIEW_JOIN_NOT_SUPPORTED.**\n\n### mv_workforce_hours\n- **Dimensions**: Site, Grade, Grade Description, Employee Type, Shift Type, Shift Date\n- **Measures**: Shifts, Staff (distinct), Total Hours, Filled Shifts, Unfilled Shifts, Fill Rate (0.0-1.0)\n- **Example (fill rate by site)**: SELECT Site, MEASURE(`Fill Rate`) FROM ramsay_health.ops.mv_workforce_hours WHERE `Shift Date` >= CURRENT_DATE() GROUP BY Site\n- **Example (hours by grade)**: SELECT Grade, MEASURE(`Total Hours`) FROM ramsay_health.ops.mv_workforce_hours GROUP BY Grade\n- **Example (shifts by employee type)**: SELECT `Employee Type`, MEASURE(`Shifts`) FROM ramsay_health.ops.mv_workforce_hours GROUP BY `Employee Type`\n\n## Plain Tables/Views (for JOINs)\n- **vwah_hoursassignment**: Shift assignments; query directly; use for complex analysis\n- **vwah_unavailability**: Absence/sickness data; LostHours column = hours missed\n- **dim_site**: Site dimension with site codes and names\n\n## Staffing Context\n- **Fill Rate**: Filled shifts / Total shifts (target 82-92% UK norm; current avg 85-94%)\n- **Grades**: RN (Registered Nurse), HCA (Health Care Assistant), ODP (Operating Department Practitioner), A&C (Admin & Clerical)\n- **Employee Types**: Substantive, Bank, Agency (Agency ~3.2x cost premium)\n- **Forward Shifts**: Shift Date >= CURRENT_DATE()\n- **Sickness Reasons**: Tracked in vwah_unavailability with UnavailabilityReasonGroup\n",
+        "instruction_type": "TEXT_INSTRUCTION"
+      }
+    ],
+    "sample_questions": [
+      "What is the fill rate by site for the next 7 days?",
+      "How many staff do we have by grade?",
+      "Show total hours by grade",
+      "What are sickness hours by reason?",
+      "Show agency versus substantive splits",
+      "What is the fill rate by site and grade for shifts in the next 7 days?",
+      "Show staff hours by grade and site",
+      "What is the sickness rate by site over the last 30 days?"
+    ]
+  },
+  "GENIE_CAPACITY": {
+    "display_name": "Ramsay Capacity",
+    "description": "Theatre utilisation, bed occupancy, diagnostic slots, capacity forecast",
+    "table_identifiers": [
+      "ramsay_health.ops.mv_theatre_util",
+      "ramsay_health.ops.mv_bed_occupancy",
+      "ramsay_health.ops.vw_bed_occupancy",
+      "ramsay_health.ops.vw_theatre_throughput",
+      "ramsay_health.ops.vw_diagnostic_capacity",
+      "ramsay_health.ops.dim_site",
+      "ramsay_health.ops.vw_capacity_forecast"
+    ],
+    "instructions": [
+      {
+        "title": "Ramsay Capacity",
+        "content": "\n## Metric Views: Theatre & Bed Occupancy \u2014 NEVER JOIN metric views\n\nMetric views; query with MEASURE() + GROUP BY dimensions ONLY.\n**CRITICAL: Metric views CANNOT be joined to other tables. Joining will fail with METRIC_VIEW_JOIN_NOT_SUPPORTED.**\n\n### mv_theatre_util\n- **Dimensions**: Site, Specialty, Session Date\n- **Measures**: Avg Utilisation (%), Cases Completed, Cases Scheduled, Cancellations, Sessions\n- **Example (utilisation by site)**: SELECT Site, MEASURE(\\`Avg Utilisation\\`) FROM ramsay_health.ops.mv_theatre_util GROUP BY Site\n- **Example (cases by specialty)**: SELECT Specialty, MEASURE(\\`Cases Completed\\`) FROM ramsay_health.ops.mv_theatre_util GROUP BY Specialty\n- **Example (cancellations by site)**: SELECT Site, MEASURE(\\`Cancellations\\`) FROM ramsay_health.ops.mv_theatre_util GROUP BY Site\n\n### mv_bed_occupancy\n- **Dimensions**: Site, Bed Date\n- **Measures**: Avg Occupancy, Beds Occupied, Beds Available, Admissions, Discharges\n- **Example (average occupancy by site)**: SELECT Site, MEASURE(\\`Avg Occupancy\\`) FROM ramsay_health.ops.mv_bed_occupancy GROUP BY Site\n- **Example (beds occupied by site)**: SELECT Site, MEASURE(\\`Beds Occupied\\`) FROM ramsay_health.ops.mv_bed_occupancy GROUP BY Site\n- **Example (admissions and discharges)**: SELECT Site, MEASURE(\\`Admissions\\`), MEASURE(\\`Discharges\\`) FROM ramsay_health.ops.mv_bed_occupancy GROUP BY Site\n- **IMPORTANT**: Always use MEASURE() with backticks around measure names. Valid measures: Avg Occupancy, Beds Occupied, Beds Available, Admissions, Discharges. Do NOT use OccupancyPct or other variants.\n\n## Plain Views (for JOINs and complex queries)\n- **vw_bed_occupancy**: Bed capacity details; query directly\n- **vw_theatre_throughput**: Theatre case details\n- **vw_diagnostic_capacity**: Slots available vs booked by modality (MRI, CT, X-ray)\n- **vw_capacity_forecast**: Admissions forecast (point + confidence intervals)\n- **dim_site**: Site reference\n\n## Capacity Thresholds\n- **Theatre Util**: 72.8% current avg; <50% = underutilisation risk\n- **Bed Occupancy**: 76.1% current avg; >90% = capacity risk\n- **Diagnostics**: 80% current util; identify bottlenecks by modality\n- **Forecast**: Monitor 30-day forecast vs current capacity\n",
+        "instruction_type": "TEXT_INSTRUCTION"
+      }
+    ],
+    "sample_questions": [
+      "What is the average theatre utilisation by site?",
+      "Show average bed occupancy by site",
+      "Show diagnostic slots available vs booked by modality",
+      "Forecast admissions for the next 30 days by site",
+      "Show theatre sessions and cancellations by specialty",
+      "How many theatre cases did Springfield Hospital complete between 2026-09-14 and 2026-09-16?",
+      "What is the spare theatre capacity (minutes unused) at Rivers Hospital versus Ashtead Hospital in the week of 2026-09-14?",
+      "Show theatre utilisation forecast for each hospital over the next 30 days"
+    ]
+  }
+}
