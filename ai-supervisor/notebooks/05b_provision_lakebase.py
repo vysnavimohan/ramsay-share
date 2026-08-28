@@ -13,7 +13,7 @@
 
 # COMMAND ----------
 
-# MAGIC %pip install "psycopg[binary]" --quiet
+# MAGIC %pip install "psycopg[binary]" -U "databricks-sdk>=0.40" --quiet
 # MAGIC %restart_python
 
 # COMMAND ----------

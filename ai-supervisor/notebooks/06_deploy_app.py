@@ -18,6 +18,11 @@
 
 # COMMAND ----------
 
+# MAGIC %pip install -U "databricks-sdk>=0.40" --quiet
+# MAGIC %restart_python
+
+# COMMAND ----------
+
 # MAGIC %run ./_common
 
 # COMMAND ----------
