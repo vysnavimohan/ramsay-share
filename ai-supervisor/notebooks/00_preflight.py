@@ -23,10 +23,10 @@ dbutils.widgets.text("warehouse_id", "7464666eb7d50c27", "3. SQL warehouse id (r
 dbutils.widgets.text("staging_volume", "", "4. Staging Volume catalog.schema.volume (blank => <cat>.<sch>._staging)")
 dbutils.widgets.text("data_volume_path", "", "5. /Volumes path for the data (blank => derived from staging_volume)")
 dbutils.widgets.text("app_name", "ramsay-ai-supervisor", "6. Databricks App name (<=30 chars)")
-dbutils.widgets.text("app_source_path", "", "7. Workspace path to the unzipped app source (Stage 06)")
-dbutils.widgets.text("fm_endpoint", "databricks-gpt-oss-120b", "8. Foundation-model endpoint for the app")
-dbutils.widgets.text("lakebase_instance", "", "8b. Lakebase instance (blank => skip Lakebase / Stage 05b no-op)")
-dbutils.widgets.text("never_touch", "ramsay_workforce", "9. Comma-sep catalogs/ids teardown must never remove")
+dbutils.widgets.text("app_source_path", "", "7. (Stage 06 only) unzipped app folder — leave blank until then")
+dbutils.widgets.text("lakebase_instance", "", "8. (optional) Lakebase instance — blank => skip (Stage 05b no-op)")
+dbutils.widgets.text("never_touch", "ramsay_workforce", "9. (advanced) teardown safety — leave as-is")
+# Note: the app's LLM endpoint is fixed to databricks-gpt-oss-120b (not a widget).
 
 # COMMAND ----------
 

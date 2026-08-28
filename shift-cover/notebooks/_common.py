@@ -41,8 +41,11 @@ ORIGIN_SCHEMA = "allocate"
 
 # COMMAND ----------
 
+# Fixed for these demos — the app's LLM endpoint. Not a widget (always this value).
+FM_ENDPOINT = "databricks-gpt-oss-120b"
+
 # Canonical parameter keys + their defaults (used to pre-fill the preflight widgets and as the
-# fallback if nothing has been saved yet).
+# fallback if nothing has been saved yet). fm_endpoint is intentionally NOT here (hardcoded above).
 PARAM_DEFAULTS = {
     "target_catalog": "classic_stable_82ujqz",
     "target_schema": "ramsay_shiftcover",
@@ -51,7 +54,8 @@ PARAM_DEFAULTS = {
     "data_volume_path": "",
     "app_name": "ramsay-shift-cover",
     "app_source_path": "",
-    "fm_endpoint": "databricks-gpt-oss-120b",
+    # Safety guard for 99_teardown — refuses to drop anything whose catalog/id is listed here.
+    # Defaults to the OTHER Ramsay demo's catalog so a mis-set teardown can't nuke it. Set-and-forget.
     "never_touch": "ramsay_health",
 }
 
@@ -64,7 +68,7 @@ def _derive(raw):
         "TARGET_SCHEMA": g("target_schema"),
         "WAREHOUSE_ID": g("warehouse_id"),
         "APP_NAME": g("app_name"),
-        "FM_ENDPOINTS_REQUIRED": g("fm_endpoint"),
+        "FM_ENDPOINTS_REQUIRED": FM_ENDPOINT,
         "APP_SOURCE_PATH": g("app_source_path"),
         "NEVER_TOUCH": g("never_touch"),
     }

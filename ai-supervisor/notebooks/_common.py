@@ -29,6 +29,9 @@ ORIGIN_SCHEMA = "ops"
 # Deployment parameters are set ONCE in 00_preflight (widgets render there) and saved to
 # deploy_config.json in the package folder; every later notebook reads that file via %run ./_common.
 # (Widgets defined inside a %run helper don't render in the parent's UI, so they live in preflight.)
+# Fixed for these demos — the app's LLM endpoint. Not a widget (always this value).
+FM_ENDPOINT = "databricks-gpt-oss-120b"
+
 PARAM_DEFAULTS = {
     "target_catalog": "classic_stable_82ujqz",
     "target_schema": "ramsay_ai_supervisor",
@@ -37,8 +40,9 @@ PARAM_DEFAULTS = {
     "data_volume_path": "",
     "app_name": "ramsay-ai-supervisor",
     "app_source_path": "",
-    "fm_endpoint": "databricks-gpt-oss-120b",
     "lakebase_instance": "",
+    # Safety guard for 99_teardown — refuses to drop anything whose catalog/id is listed here.
+    # Defaults to the OTHER Ramsay demo's catalog. Set-and-forget.
     "never_touch": "ramsay_workforce",
 }
 
@@ -51,7 +55,7 @@ def _derive(raw):
         "TARGET_SCHEMA": g("target_schema"),
         "WAREHOUSE_ID": g("warehouse_id"),
         "APP_NAME": g("app_name"),
-        "FM_ENDPOINTS_REQUIRED": g("fm_endpoint"),
+        "FM_ENDPOINTS_REQUIRED": FM_ENDPOINT,
         "APP_SOURCE_PATH": g("app_source_path"),
         "LAKEBASE_INSTANCE": g("lakebase_instance"),
         "NEVER_TOUCH": g("never_touch"),
