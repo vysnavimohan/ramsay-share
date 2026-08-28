@@ -89,8 +89,11 @@ The supervisor's live conversational Q&A ("Genie One") needs a Claude model that
 every region (e.g. fevm-azure). The 4 spaces + dashboard + tables + app still build and deploy; only
 the live answer path degrades where the model is absent. This is reported as a WARN, never a failure.
 
-## 8. Configuration (widgets in `notebooks/_common`)
+## 8. Configuration (widgets in `00_preflight` only)
 
-`target_catalog` (existing), `target_schema` (new), `warehouse_id`, `staging_volume`,
-`data_volume_path`, `app_name`, `app_source_path`, `lakebase_instance` (required),
-`never_touch`. No profile and no source keys.
+Just **4** parameters: `target_catalog` (existing), `target_schema` (new), `warehouse_id`,
+`lakebase_instance` (required). Set in `00_preflight`, saved to `deploy_config.json`, reused by
+every later notebook. **Fixed / derived (not asked):** app name = `ramsay-ai-supervisor`;
+staging Volume derived to `<catalog>.<schema>._staging`; FM endpoint = `databricks-gpt-oss-120b`;
+teardown guard = `ramsay_workforce`. `app_source_path` is a Stage-06-only widget. No profile, no
+source keys.

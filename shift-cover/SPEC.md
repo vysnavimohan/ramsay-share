@@ -97,8 +97,10 @@ Shift-Cover has **no Lakebase**. Its only stateful surface is the `cover_decisio
 outreach/decision ledger), carried as data in Stage 03. Canonical Genie questions live inside the
 Genie space's 24 instructions (carried in Stage 05) — there is no separate `seed_questions` table.
 
-## 7. Configuration (widgets in `notebooks/_common`)
+## 7. Configuration (widgets in `00_preflight` only)
 
-`target_catalog` (existing), `target_schema` (new), `warehouse_id`, `staging_volume`,
-`data_volume_path`, `app_name`, `app_source_path`, `fm_endpoint`, `never_touch`. No profile and no
-source keys — the notebook authenticates as its own runtime identity.
+Just **3** parameters: `target_catalog` (existing), `target_schema` (new), `warehouse_id`. Set in
+`00_preflight`, saved to `deploy_config.json`, reused by every later notebook. **Fixed / derived
+(not asked):** app name = `ramsay-shift-cover`; staging Volume derived to `<catalog>.<schema>._staging`;
+FM endpoint = `databricks-gpt-oss-120b`; teardown guard = `ramsay_health`. `app_source_path` is a
+Stage-06-only widget. No profile, no source keys — the notebook authenticates as its own runtime identity.

@@ -37,9 +37,9 @@ Notebook **`01b_stage_data_to_volume`** creates the schema + a UC Volume and cop
 `data/<table>/*.parquet` from the Git folder straight into the Volume (where Stage 03's `COPY INTO`
 reads it). Just set the widgets (Step 4) and run 01b — that's it.
 
-> Prefer to do it by hand instead? Create a Volume, then **Catalog → Volume → Upload** the `data/`
-> subfolders so the layout is `/Volumes/<catalog>/<schema>/<volume>/<table>/*.parquet`, and skip 01b.
-> Either way, point the `staging_volume` / `data_volume_path` widgets at your Volume.
+> Prefer to do it by hand instead? The staging Volume is always `<target_catalog>.<target_schema>._staging`
+> (`01b` creates it). Upload the `data/` subfolders there via **Catalog → Volume → Upload** so the
+> layout is `/Volumes/<catalog>/<schema>/_staging/<table>/*.parquet`, and skip 01b.
 
 ## Step 3 — Manual upload: the app (zip)
 1. Upload **`app.zip`** into your workspace and **unzip** it to a folder, e.g.
@@ -47,19 +47,19 @@ reads it). Just set the widgets (Step 4) and run 01b — that's it.
 2. Set the `app_source_path` widget (Stage 06) to that folder. (Leave blank only if you unzipped it
    to an `app/` folder beside the notebooks.)
 
-## Step 4 — Set the widgets
-Open **`notebooks/_common`** and set the widgets at the top (they persist across `%run`):
+## Step 4 — Set the widgets (top of `00_preflight` — the ONLY notebook with widgets)
+Just **3** parameters. Everything else is derived or fixed.
 | Widget | Meaning | Example |
 |---|---|---|
 | `target_catalog` | existing catalog to build into | `classic_stable_82ujqz` |
 | `target_schema` | schema to create (new) | `ramsay_shiftcover` |
 | `warehouse_id` | running SQL warehouse | `7464666eb7d50c27` |
-| `staging_volume` | Volume for parquet (blank ⇒ `<cat>.<sch>._staging`) | |
-| `data_volume_path` | where you uploaded `data/` (blank ⇒ staging volume) | |
-| `app_name` | app name (≤30 chars) | `ramsay-shift-cover` |
-| `app_source_path` | unzipped app folder (Stage 06) | `/Workspace/Users/you/ramsay-shift-cover-app` |
-| `fm_endpoint` | model endpoint for the app | `databricks-gpt-oss-120b` |
-| `never_touch` | catalogs/ids teardown must never remove | `ramsay_health` |
+
+Fixed / derived (you do NOT set these):
+- **app name** = `ramsay-shift-cover` (hard-coded)
+- **staging Volume** = derived to `<catalog>.<schema>._staging` (created inside the target schema by `01b`)
+- **FM endpoint** = `databricks-gpt-oss-120b`; **teardown guard** = `ramsay_health`
+- **`app_source_path`** — set on **Stage 06** (the notebook that unzips + deploys the app)
 
 ## Step 5 — Run the notebooks in order
 | # | Notebook | Does |

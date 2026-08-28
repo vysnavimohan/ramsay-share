@@ -20,10 +20,9 @@
 dbutils.widgets.text("target_catalog", "classic_stable_82ujqz", "1. Target catalog (must already exist)")
 dbutils.widgets.text("target_schema", "ramsay_ai_supervisor", "2. Target schema (created if absent)")
 dbutils.widgets.text("warehouse_id", "7464666eb7d50c27", "3. SQL warehouse id (runs all SQL)")
-dbutils.widgets.text("staging_volume", "", "4. Staging Volume catalog.schema.volume (blank => <cat>.<sch>._staging)")
-dbutils.widgets.text("app_name", "ramsay-ai-supervisor", "5. Databricks App name (<=30 chars)")
-dbutils.widgets.text("lakebase_instance", "ramsay-serving", "6. Lakebase instance name (required — serving layer)")
-# Fixed (not widgets): LLM endpoint = databricks-gpt-oss-120b; teardown safety = ramsay_workforce.
+dbutils.widgets.text("lakebase_instance", "ramsay-serving", "4. Lakebase instance name (required — serving layer)")
+# Fixed (not widgets): app name = ramsay-ai-supervisor; LLM endpoint = databricks-gpt-oss-120b;
+# teardown safety = ramsay_workforce. The staging Volume is always derived to <cat>.<sch>._staging.
 # app_source_path is asked for in Stage 06 (the notebook that uses it).
 
 # COMMAND ----------

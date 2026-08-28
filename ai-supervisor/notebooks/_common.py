@@ -34,16 +34,16 @@ ORIGIN_SCHEMA = "ops"
 #  - NEVER_TOUCH: 99_teardown refuses to drop anything whose catalog/id is listed here (guards the
 #    OTHER Ramsay demo's catalog).
 FM_ENDPOINT = "databricks-gpt-oss-120b"
+APP_NAME = "ramsay-ai-supervisor"
 NEVER_TOUCH = "ramsay_workforce"
 
-# The parameters preflight asks for (its widgets) and saves to deploy_config.json.
-# Lakebase is REQUIRED for this demo (the supervisor app's starter prompts live there).
+# The ONLY parameters preflight asks for (its widgets) and saves to deploy_config.json.
+# staging_volume is NOT asked — it is always derived to <catalog>.<schema>._staging; app_name is
+# hard-coded above. Lakebase is REQUIRED for this demo (the supervisor app's starter prompts live there).
 PARAM_DEFAULTS = {
     "target_catalog": "classic_stable_82ujqz",
     "target_schema": "ramsay_ai_supervisor",
     "warehouse_id": "7464666eb7d50c27",
-    "staging_volume": "",
-    "app_name": "ramsay-ai-supervisor",
     "lakebase_instance": "ramsay-serving",
 }
 
@@ -57,14 +57,14 @@ def _derive(raw):
         "TARGET_CATALOG": g("target_catalog"),
         "TARGET_SCHEMA": g("target_schema"),
         "WAREHOUSE_ID": g("warehouse_id"),
-        "APP_NAME": g("app_name"),
+        "APP_NAME": APP_NAME,
         "FM_ENDPOINTS_REQUIRED": FM_ENDPOINT,
         "APP_SOURCE_PATH": (raw.get("app_source_path") or "").strip(),
         "LAKEBASE_INSTANCE": g("lakebase_instance"),
         "NEVER_TOUCH": NEVER_TOUCH,
     }
-    sv = g("staging_volume")
-    c["STAGING_VOLUME"] = sv or f'{c["TARGET_CATALOG"]}.{c["TARGET_SCHEMA"]}._staging'
+    # staging_volume is always derived: a Volume inside the target schema.
+    c["STAGING_VOLUME"] = f'{c["TARGET_CATALOG"]}.{c["TARGET_SCHEMA"]}._staging'
     v = c["STAGING_VOLUME"].split(".")
     c["DATA_VOLUME_PATH"] = f"/Volumes/{v[0]}/{v[1]}/{v[2]}"
     return c

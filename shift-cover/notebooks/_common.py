@@ -43,18 +43,20 @@ ORIGIN_SCHEMA = "allocate"
 
 # Fixed for these demos (not widgets):
 #  - FM_ENDPOINT: the app's LLM endpoint (always this value).
+#  - APP_NAME: the Databricks App name (hard-coded — recipients don't choose it).
 #  - NEVER_TOUCH: 99_teardown refuses to drop anything whose catalog/id is listed here. Defaults to
 #    the OTHER Ramsay demo's catalog so a mis-set teardown can't nuke it.
 FM_ENDPOINT = "databricks-gpt-oss-120b"
+APP_NAME = "ramsay-shift-cover"
 NEVER_TOUCH = "ramsay_health"
 
 # The ONLY parameters preflight asks for (its widgets) and saves to deploy_config.json.
+# staging_volume is NOT asked — it is always derived to <catalog>.<schema>._staging (a Volume
+# created inside the target schema); app_name is hard-coded above.
 PARAM_DEFAULTS = {
     "target_catalog": "classic_stable_82ujqz",
     "target_schema": "ramsay_shiftcover",
     "warehouse_id": "7464666eb7d50c27",
-    "staging_volume": "",
-    "app_name": "ramsay-shift-cover",
 }
 
 
@@ -67,13 +69,14 @@ def _derive(raw):
         "TARGET_CATALOG": g("target_catalog"),
         "TARGET_SCHEMA": g("target_schema"),
         "WAREHOUSE_ID": g("warehouse_id"),
-        "APP_NAME": g("app_name"),
+        "APP_NAME": APP_NAME,
         "FM_ENDPOINTS_REQUIRED": FM_ENDPOINT,
         "APP_SOURCE_PATH": (raw.get("app_source_path") or "").strip(),
         "NEVER_TOUCH": NEVER_TOUCH,
     }
-    sv = g("staging_volume")
-    c["STAGING_VOLUME"] = sv or f'{c["TARGET_CATALOG"]}.{c["TARGET_SCHEMA"]}._staging'
+    # staging_volume is always derived: a Volume inside the target schema. (raw may carry a saved
+    # value from an older config; ignore it so the layout stays predictable.)
+    c["STAGING_VOLUME"] = f'{c["TARGET_CATALOG"]}.{c["TARGET_SCHEMA"]}._staging'
     v = c["STAGING_VOLUME"].split(".")
     c["DATA_VOLUME_PATH"] = f"/Volumes/{v[0]}/{v[1]}/{v[2]}"
     return c

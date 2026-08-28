@@ -51,18 +51,20 @@ Upload **`app.zip`** into your workspace and **unzip** it to a folder, e.g.
 `/Workspace/Users/<you>/ramsay-ai-supervisor-app`. Set the `app_source_path` widget (Stage 06) to
 that folder.
 
-## Step 4 — Set the widgets (top of `notebooks/_common`)
+## Step 4 — Set the widgets (top of `00_preflight` — the ONLY notebook with widgets)
+Just **4** parameters. Everything else is derived or fixed.
 | Widget | Meaning | Example |
 |---|---|---|
 | `target_catalog` | existing catalog | `classic_stable_82ujqz` |
 | `target_schema` | schema to create | `ramsay_ai_supervisor` |
 | `warehouse_id` | running SQL warehouse | `7464666eb7d50c27` |
-| `staging_volume` / `data_volume_path` | parquet location | |
-| `app_name` | app name (≤30) | `ramsay-ai-supervisor` |
-| `app_source_path` | unzipped app folder | `/Workspace/Users/you/ramsay-ai-supervisor-app` |
-| `fm_endpoint` | app LLM endpoint | `databricks-gpt-oss-120b` |
 | `lakebase_instance` | **required** — Lakebase instance name (app's serving layer) | `ramsay-serving` |
-| `never_touch` | catalogs/ids teardown must never remove | `ramsay_workforce` |
+
+Fixed / derived (you do NOT set these):
+- **app name** = `ramsay-ai-supervisor` (hard-coded)
+- **staging Volume** = derived to `<catalog>.<schema>._staging` (created inside the target schema)
+- **FM endpoint** = `databricks-gpt-oss-120b`; **teardown guard** = `ramsay_workforce`
+- **`app_source_path`** — set on **Stage 06** (the notebook that unzips + deploys the app)
 
 ## Step 5 — Run the notebooks in order
 | # | Notebook | Does |
