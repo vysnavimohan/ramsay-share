@@ -59,8 +59,10 @@ host = inst.read_write_dns
 if not host:
     fail(f"instance '{pid}' has no read_write_dns yet — provisioning may still be finishing; re-run shortly")
 
-# 2. mint a short-lived Postgres credential for the instance (same call the app uses)
-tok = db.generate_database_credential(instance_names=[pid]).token
+# 2. mint a short-lived Postgres credential for the instance (same call the app uses).
+#    request_id is required by the API — generate a fresh one per call.
+import uuid
+tok = db.generate_database_credential(instance_names=[pid], request_id=str(uuid.uuid4())).token
 user = w.current_user.me().user_name
 
 # 3. seed the starter prompts into databricks_postgres
