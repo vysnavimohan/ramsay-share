@@ -78,7 +78,7 @@ try:
 except Exception:
     app = {}
 if not app.get("name"):
-    w.api_client.do("POST", "/api/2.0/apps", {"name": name, "description": "Ramsay Shift-Cover (handover deploy)"})
+    w.api_client.do("POST", "/api/2.0/apps", body={"name": name, "description": "Ramsay Shift-Cover (handover deploy)"})
     ok(f"created app {name}")
     for _ in range(60):
         app = w.api_client.do("GET", f"/api/2.0/apps/{name}")
@@ -116,7 +116,7 @@ ok(f"granted app SP {sp}")
 
 # 4. deploy (SNAPSHOT)
 dep = w.api_client.do("POST", f"/api/2.0/apps/{name}/deployments",
-                      {"source_code_path": ws_root, "mode": "SNAPSHOT"})
+                      body={"source_code_path": ws_root, "mode": "SNAPSHOT"})
 dep_id = dep.get("deployment_id")
 state = None
 for _ in range(60):
