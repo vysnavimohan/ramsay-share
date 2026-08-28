@@ -18,6 +18,14 @@
 
 # COMMAND ----------
 
+# MAGIC %md ## ⚙️ Stage 06 needs ONE input: where you unzipped `app.zip`
+
+# COMMAND ----------
+
+dbutils.widgets.text("app_source_path", "", "Workspace path to the unzipped app source (e.g. /Workspace/Users/you/ramsay-ai-supervisor-app)")
+
+# COMMAND ----------
+
 # MAGIC %run ./_common
 
 # COMMAND ----------
@@ -30,7 +38,7 @@ w = sql.w
 cat, sch = CFG["TARGET_CATALOG"], CFG["TARGET_SCHEMA"]
 name = CFG["APP_NAME"][:30].rstrip("-")
 
-src = CFG.get("APP_SOURCE_PATH", "").strip()
+src = dbutils.widgets.get("app_source_path").strip()
 if src:
     app_src = Path("/Workspace" + src) if not src.startswith("/Workspace") else Path(src)
 else:

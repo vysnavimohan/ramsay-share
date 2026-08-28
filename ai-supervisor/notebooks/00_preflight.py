@@ -21,12 +21,9 @@ dbutils.widgets.text("target_catalog", "classic_stable_82ujqz", "1. Target catal
 dbutils.widgets.text("target_schema", "ramsay_ai_supervisor", "2. Target schema (created if absent)")
 dbutils.widgets.text("warehouse_id", "7464666eb7d50c27", "3. SQL warehouse id (runs all SQL)")
 dbutils.widgets.text("staging_volume", "", "4. Staging Volume catalog.schema.volume (blank => <cat>.<sch>._staging)")
-dbutils.widgets.text("data_volume_path", "", "5. /Volumes path for the data (blank => derived from staging_volume)")
-dbutils.widgets.text("app_name", "ramsay-ai-supervisor", "6. Databricks App name (<=30 chars)")
-dbutils.widgets.text("app_source_path", "", "7. (Stage 06 only) unzipped app folder — leave blank until then")
-dbutils.widgets.text("lakebase_instance", "", "8. (optional) Lakebase instance — blank => skip (Stage 05b no-op)")
-dbutils.widgets.text("never_touch", "ramsay_workforce", "9. (advanced) teardown safety — leave as-is")
-# Note: the app's LLM endpoint is fixed to databricks-gpt-oss-120b (not a widget).
+dbutils.widgets.text("app_name", "ramsay-ai-supervisor", "5. Databricks App name (<=30 chars)")
+# Fixed (not widgets): LLM endpoint = databricks-gpt-oss-120b; teardown safety = ramsay_workforce.
+# app_source_path is asked for in Stage 06; lakebase_instance in Stage 05b (the notebooks that use them).
 
 # COMMAND ----------
 

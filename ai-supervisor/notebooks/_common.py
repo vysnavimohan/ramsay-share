@@ -29,26 +29,28 @@ ORIGIN_SCHEMA = "ops"
 # Deployment parameters are set ONCE in 00_preflight (widgets render there) and saved to
 # deploy_config.json in the package folder; every later notebook reads that file via %run ./_common.
 # (Widgets defined inside a %run helper don't render in the parent's UI, so they live in preflight.)
-# Fixed for these demos — the app's LLM endpoint. Not a widget (always this value).
+# Fixed for these demos (not widgets):
+#  - FM_ENDPOINT: the app's LLM endpoint (always this value).
+#  - NEVER_TOUCH: 99_teardown refuses to drop anything whose catalog/id is listed here (guards the
+#    OTHER Ramsay demo's catalog).
 FM_ENDPOINT = "databricks-gpt-oss-120b"
+NEVER_TOUCH = "ramsay_workforce"
 
+# The ONLY parameters preflight asks for (its widgets) and saves to deploy_config.json.
 PARAM_DEFAULTS = {
     "target_catalog": "classic_stable_82ujqz",
     "target_schema": "ramsay_ai_supervisor",
     "warehouse_id": "7464666eb7d50c27",
     "staging_volume": "",
-    "data_volume_path": "",
     "app_name": "ramsay-ai-supervisor",
-    "app_source_path": "",
-    "lakebase_instance": "",
-    # Safety guard for 99_teardown — refuses to drop anything whose catalog/id is listed here.
-    # Defaults to the OTHER Ramsay demo's catalog. Set-and-forget.
-    "never_touch": "ramsay_workforce",
 }
 
 
 def _derive(raw):
-    """Turn a raw {key: value} dict into the CFG the stages use (fills volume defaults)."""
+    """Turn the saved {key: value} dict into the CFG the stages use.
+    data_volume_path is derived from the staging Volume; app_source_path (Stage 06) and
+    lakebase_instance (Stage 05b) are their own notebooks' widgets, read from raw if present;
+    never_touch/fm are fixed constants."""
     g = lambda k: (raw.get(k) or PARAM_DEFAULTS.get(k, "")).strip()
     c = {
         "TARGET_CATALOG": g("target_catalog"),
@@ -56,18 +58,14 @@ def _derive(raw):
         "WAREHOUSE_ID": g("warehouse_id"),
         "APP_NAME": g("app_name"),
         "FM_ENDPOINTS_REQUIRED": FM_ENDPOINT,
-        "APP_SOURCE_PATH": g("app_source_path"),
-        "LAKEBASE_INSTANCE": g("lakebase_instance"),
-        "NEVER_TOUCH": g("never_touch"),
+        "APP_SOURCE_PATH": (raw.get("app_source_path") or "").strip(),
+        "LAKEBASE_INSTANCE": (raw.get("lakebase_instance") or "").strip(),
+        "NEVER_TOUCH": NEVER_TOUCH,
     }
     sv = g("staging_volume")
     c["STAGING_VOLUME"] = sv or f'{c["TARGET_CATALOG"]}.{c["TARGET_SCHEMA"]}._staging'
-    dv = g("data_volume_path")
-    if dv:
-        c["DATA_VOLUME_PATH"] = dv.rstrip("/")
-    else:
-        v = c["STAGING_VOLUME"].split(".")
-        c["DATA_VOLUME_PATH"] = f"/Volumes/{v[0]}/{v[1]}/{v[2]}"
+    v = c["STAGING_VOLUME"].split(".")
+    c["DATA_VOLUME_PATH"] = f"/Volumes/{v[0]}/{v[1]}/{v[2]}"
     return c
 
 # COMMAND ----------

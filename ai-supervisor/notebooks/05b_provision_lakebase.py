@@ -12,11 +12,19 @@
 
 # COMMAND ----------
 
+# MAGIC %md ## ⚙️ Optional: set a Lakebase instance name (blank = skip this stage)
+
+# COMMAND ----------
+
+dbutils.widgets.text("lakebase_instance", "", "Lakebase instance name (blank => skip / no-op)")
+
+# COMMAND ----------
+
 # MAGIC %run ./_common
 
 # COMMAND ----------
 
-pid = CFG.get("LAKEBASE_INSTANCE", "").strip()
+pid = dbutils.widgets.get("lakebase_instance").strip()
 if not pid:
     manifest_put("lakebase", {"applicable": False,
                               "note": "lakebase_instance blank — no Postgres serving layer; app starter "
