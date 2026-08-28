@@ -182,6 +182,42 @@
       "type": "MANAGED",
       "origin": "genie_workforce_agent",
       "refs": []
+    },
+    "fc_theatre_util": {
+      "type": "MANAGED",
+      "origin": "app_forecast",
+      "refs": []
+    },
+    "fc_wait": {
+      "type": "MANAGED",
+      "origin": "app_forecast",
+      "refs": []
+    },
+    "vw_case_ledger": {
+      "type": "VIEW",
+      "origin": "app_analytics",
+      "refs": [
+        "tbinvoice",
+        "tbbillvisit",
+        "tbreferrals",
+        "dim_site"
+      ]
+    },
+    "vw_forecast_theatre_util": {
+      "type": "VIEW",
+      "origin": "app_analytics",
+      "refs": [
+        "fc_theatre_util",
+        "dim_site"
+      ]
+    },
+    "vw_forecast_wait": {
+      "type": "VIEW",
+      "origin": "app_analytics",
+      "refs": [
+        "fc_wait",
+        "dim_site"
+      ]
     }
   },
   "order": [
@@ -189,6 +225,10 @@
     "fact_bed_day",
     "fact_diagnostic_slot",
     "fact_theatre_session",
+    "fc_theatre_util",
+    "fc_wait",
+    "vw_forecast_theatre_util",
+    "vw_forecast_wait",
     "fc_admissions",
     "vw_bed_occupancy",
     "mv_bed_occupancy",
@@ -196,6 +236,7 @@
     "tbinvoice",
     "tbreferrals",
     "vw_finance_base",
+    "vw_case_ledger",
     "mv_finance_margin",
     "tbwlmds",
     "vw_referral_flow",
@@ -221,7 +262,9 @@
     "tbreferrals",
     "tbwlmds",
     "vwah_hoursassignment",
-    "vwah_unavailability"
+    "vwah_unavailability",
+    "fc_theatre_util",
+    "fc_wait"
   ],
   "row_counts": {
     "dim_site": 5,
@@ -234,7 +277,9 @@
     "tbreferrals": 311166,
     "tbwlmds": 311166,
     "vwah_hoursassignment": 83393,
-    "vwah_unavailability": 21125
+    "vwah_unavailability": 21125,
+    "fc_theatre_util": 2053,
+    "fc_wait": 439
   },
   "by_type": {
     "MANAGED": [
@@ -248,7 +293,9 @@
       "tbreferrals",
       "tbwlmds",
       "vwah_hoursassignment",
-      "vwah_unavailability"
+      "vwah_unavailability",
+      "fc_theatre_util",
+      "fc_wait"
     ],
     "VIEW": [
       "vw_bed_occupancy",
@@ -258,7 +305,10 @@
       "vw_capacity_forecast",
       "vw_diagnostic_capacity",
       "vw_readmissions",
-      "vw_waiting_list"
+      "vw_waiting_list",
+      "vw_case_ledger",
+      "vw_forecast_theatre_util",
+      "vw_forecast_wait"
     ],
     "METRIC_VIEW": [
       "mv_bed_occupancy",

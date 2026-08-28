@@ -54,6 +54,7 @@ def gen_app_yaml():
         ("DATABRICKS_HOST_URL", w.config.host.rstrip("/")),
         ("LLM_ENDPOINT", CFG.get("FM_ENDPOINTS_REQUIRED", "databricks-gpt-oss-120b").split(",")[0]),
         ("DATABRICKS_WAREHOUSE_ID", CFG["WAREHOUSE_ID"]),
+        ("CATALOG_SCHEMA", f"{cat}.{sch}"),
         ("GENIE_CAPACITY", genie.get("GENIE_CAPACITY", {}).get("space_id", "")),
         ("GENIE_PATIENT_FINANCE", genie.get("GENIE_PATIENT_FINANCE", {}).get("space_id", "")),
         ("GENIE_THROUGHPUT_FLOW", genie.get("GENIE_THROUGHPUT_FLOW", {}).get("space_id", "")),
