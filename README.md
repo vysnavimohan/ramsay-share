@@ -24,10 +24,12 @@ your target catalog/schema at build time.
 
 See each package's **`00_START_HERE.md`** for the click-by-click.
 
-## ⚙️ Set these widgets before running anything
+## ⚙️ Set these parameters ONCE in `00_preflight`
 
-The widgets live at the **top of every notebook** (they're defined once in `notebooks/_common` and
-shared). Open `00_preflight`, set them, then run. **You must set these — there is no prompt:**
+Widgets live **only on `00_preflight`**. Set them, run that notebook, and it **saves your choices to
+`deploy_config.json`** in the package folder. Every later notebook (`01 → 06`, `99_*`) reads that
+file automatically — **you never set widgets again.** To change a value, edit it in `00_preflight`
+and re-run that notebook.
 
 | Widget | What to enter | Example |
 |---|---|---|

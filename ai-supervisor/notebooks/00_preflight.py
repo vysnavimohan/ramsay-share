@@ -5,14 +5,28 @@
 # MAGIC (this package creates only the *schema* inside it), the warehouse is usable, and the
 # MAGIC Foundation-Model endpoint the app needs is present (else WARN — the app degrades).
 # MAGIC
-# MAGIC ### 👉 Choose your target catalog & schema HERE
-# MAGIC Running `%run ./_common` (next cell) shows widgets **at the top of this notebook**. Set them
-# MAGIC before running the rest — this is where you tell the package where to build:
-# MAGIC - **`target_catalog`** — an **existing** catalog (the package creates only a schema inside it).
-# MAGIC - **`target_schema`** — the schema to create/use for this demo (new or existing).
-# MAGIC - **`warehouse_id`** — a running SQL warehouse.
-# MAGIC
-# MAGIC The confirmation cell below echoes exactly what you selected and validates it before any build.
+# MAGIC ### 👉 This is the ONLY notebook with widgets — set catalog/schema/etc. HERE
+# MAGIC The widgets below appear in the bar at the top of this notebook. Set them, run this notebook,
+# MAGIC and it **saves your choices to `deploy_config.json`** in the package folder. Every later
+# MAGIC notebook (`01 → 06`, `05b`, `99_*`) reads that file via `%run ./_common` — **you never set
+# MAGIC widgets again.** To change a value later, edit it here and re-run this notebook.
+
+# COMMAND ----------
+
+# MAGIC %md ## ⚙️ Set the deployment parameters, then run this notebook top-to-bottom
+
+# COMMAND ----------
+
+dbutils.widgets.text("target_catalog", "classic_stable_82ujqz", "1. Target catalog (must already exist)")
+dbutils.widgets.text("target_schema", "ramsay_ai_supervisor", "2. Target schema (created if absent)")
+dbutils.widgets.text("warehouse_id", "7464666eb7d50c27", "3. SQL warehouse id (runs all SQL)")
+dbutils.widgets.text("staging_volume", "", "4. Staging Volume catalog.schema.volume (blank => <cat>.<sch>._staging)")
+dbutils.widgets.text("data_volume_path", "", "5. /Volumes path for the data (blank => derived from staging_volume)")
+dbutils.widgets.text("app_name", "ramsay-ai-supervisor", "6. Databricks App name (<=30 chars)")
+dbutils.widgets.text("app_source_path", "", "7. Workspace path to the unzipped app source (Stage 06)")
+dbutils.widgets.text("fm_endpoint", "databricks-gpt-oss-120b", "8. Foundation-model endpoint for the app")
+dbutils.widgets.text("lakebase_instance", "", "8b. Lakebase instance (blank => skip Lakebase / Stage 05b no-op)")
+dbutils.widgets.text("never_touch", "ramsay_workforce", "9. Comma-sep catalogs/ids teardown must never remove")
 
 # COMMAND ----------
 
@@ -20,26 +34,28 @@
 
 # COMMAND ----------
 
-# MAGIC %md ### Confirm your selection — catalog / schema / warehouse the whole run will use
+# MAGIC %md ### Save your selection → `deploy_config.json` (read by every later notebook)
 
 # COMMAND ----------
 
+_raw = {k: dbutils.widgets.get(k) for k in PARAM_DEFAULTS}
+save_config(_raw)
+CFG = _derive(_raw)
 cat = CFG["TARGET_CATALOG"]
 sch = CFG["TARGET_SCHEMA"]
-print("This run will build into:")
+print("Saved deploy_config.json — this run (and all later notebooks) will build into:")
 print(f"    catalog  (existing) : {cat}")
 print(f"    schema   (target)   : {sch}")
 print(f"    warehouse           : {CFG['WAREHOUSE_ID']}")
-print(f"    staging volume       : {CFG['STAGING_VOLUME']}")
-print(f"    data volume path     : {CFG['DATA_VOLUME_PATH']}")
+print(f"    staging volume      : {CFG['STAGING_VOLUME']}")
+print(f"    data volume path    : {CFG['DATA_VOLUME_PATH']}")
+print(f"    lakebase instance   : {CFG['LAKEBASE_INSTANCE'] or '(blank — Stage 05b no-op)'}")
 if not cat:
-    fail("target_catalog widget is empty — set it to an EXISTING catalog and re-run.")
+    fail("target_catalog is empty — set it to an EXISTING catalog and re-run.")
 if not sch:
-    fail("target_schema widget is empty — set it to the schema you want to build into and re-run.")
+    fail("target_schema is empty — set it to the schema to build into and re-run.")
 if not CFG["WAREHOUSE_ID"]:
-    fail("warehouse_id widget is empty — set it to a running SQL warehouse and re-run.")
-print("\n➡️  If the catalog/schema above is not what you want, edit the widgets at the top of this "
-      "notebook and re-run this cell before continuing.")
+    fail("warehouse_id is empty — set it to a running SQL warehouse and re-run.")
 
 # COMMAND ----------
 

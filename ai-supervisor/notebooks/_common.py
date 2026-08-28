@@ -26,47 +26,45 @@ ORIGIN_SCHEMA = "ops"
 
 # COMMAND ----------
 
-dbutils.widgets.text("target_catalog", "classic_stable_82ujqz", "Target catalog (must already exist)")
-dbutils.widgets.text("target_schema", "ramsay_ai_supervisor", "Target schema (created if absent)")
-dbutils.widgets.text("warehouse_id", "7464666eb7d50c27", "SQL warehouse id (runs all SQL)")
-dbutils.widgets.text("staging_volume", "", "Staging Volume (blank => <catalog>.<schema>._staging)")
-dbutils.widgets.text("data_volume_path", "", "Volume path holding uploaded parquet data/ (blank => staging volume)")
-dbutils.widgets.text("app_name", "ramsay-ai-supervisor", "Databricks App name (<=30 chars)")
-dbutils.widgets.text("app_source_path", "", "Workspace path to the uploaded, unzipped app source (Stage 06)")
-dbutils.widgets.text("fm_endpoint", "databricks-gpt-oss-120b", "Foundation-model endpoint for the app")
-dbutils.widgets.text("lakebase_instance", "", "Lakebase instance name (blank => skip Lakebase, Stage 05b no-op)")
-dbutils.widgets.text("never_touch", "ramsay_workforce", "Comma-sep catalogs/ids teardown must never remove")
+# Deployment parameters are set ONCE in 00_preflight (widgets render there) and saved to
+# deploy_config.json in the package folder; every later notebook reads that file via %run ./_common.
+# (Widgets defined inside a %run helper don't render in the parent's UI, so they live in preflight.)
+PARAM_DEFAULTS = {
+    "target_catalog": "classic_stable_82ujqz",
+    "target_schema": "ramsay_ai_supervisor",
+    "warehouse_id": "7464666eb7d50c27",
+    "staging_volume": "",
+    "data_volume_path": "",
+    "app_name": "ramsay-ai-supervisor",
+    "app_source_path": "",
+    "fm_endpoint": "databricks-gpt-oss-120b",
+    "lakebase_instance": "",
+    "never_touch": "ramsay_workforce",
+}
 
 
-def _cfg():
+def _derive(raw):
+    """Turn a raw {key: value} dict into the CFG the stages use (fills volume defaults)."""
+    g = lambda k: (raw.get(k) or PARAM_DEFAULTS.get(k, "")).strip()
     c = {
-        "TARGET_CATALOG": dbutils.widgets.get("target_catalog").strip(),
-        "TARGET_SCHEMA": dbutils.widgets.get("target_schema").strip(),
-        "WAREHOUSE_ID": dbutils.widgets.get("warehouse_id").strip(),
-        "APP_NAME": dbutils.widgets.get("app_name").strip(),
-        "FM_ENDPOINTS_REQUIRED": dbutils.widgets.get("fm_endpoint").strip(),
-        "APP_SOURCE_PATH": dbutils.widgets.get("app_source_path").strip(),
-        "LAKEBASE_INSTANCE": dbutils.widgets.get("lakebase_instance").strip(),
-        "NEVER_TOUCH": dbutils.widgets.get("never_touch").strip(),
+        "TARGET_CATALOG": g("target_catalog"),
+        "TARGET_SCHEMA": g("target_schema"),
+        "WAREHOUSE_ID": g("warehouse_id"),
+        "APP_NAME": g("app_name"),
+        "FM_ENDPOINTS_REQUIRED": g("fm_endpoint"),
+        "APP_SOURCE_PATH": g("app_source_path"),
+        "LAKEBASE_INSTANCE": g("lakebase_instance"),
+        "NEVER_TOUCH": g("never_touch"),
     }
-    sv = dbutils.widgets.get("staging_volume").strip()
+    sv = g("staging_volume")
     c["STAGING_VOLUME"] = sv or f'{c["TARGET_CATALOG"]}.{c["TARGET_SCHEMA"]}._staging'
-    dv = dbutils.widgets.get("data_volume_path").strip()
+    dv = g("data_volume_path")
     if dv:
         c["DATA_VOLUME_PATH"] = dv.rstrip("/")
     else:
         v = c["STAGING_VOLUME"].split(".")
         c["DATA_VOLUME_PATH"] = f"/Volumes/{v[0]}/{v[1]}/{v[2]}"
     return c
-
-
-CFG = _cfg()
-print("Target :", CFG["TARGET_CATALOG"] + "." + CFG["TARGET_SCHEMA"])
-print("Warehouse:", CFG["WAREHOUSE_ID"])
-
-
-def never_touch(cfg=CFG):
-    return [x.strip() for x in cfg.get("NEVER_TOUCH", "").split(",") if x.strip()]
 
 # COMMAND ----------
 
@@ -88,7 +86,35 @@ DATA_DIR = PKG / "data"
 ARTEFACTS = PKG / "artefacts"
 MANIFEST = PKG / "MANIFEST.json"
 DEPLOY_MANIFEST = PKG / "deployment_manifest.json"
+DEPLOY_CONFIG = PKG / "deploy_config.json"   # written by 00_preflight, read by every other stage
 print("Package dir:", PKG)
+
+# COMMAND ----------
+
+def save_config(raw):
+    """00_preflight calls this to persist the chosen parameters for all later notebooks."""
+    DEPLOY_CONFIG.write_text(json.dumps(raw, indent=2))
+
+
+def _load_saved():
+    if DEPLOY_CONFIG.exists():
+        try:
+            return json.loads(DEPLOY_CONFIG.read_text())
+        except Exception:
+            return {}
+    return {}
+
+
+CFG = _derive(_load_saved())
+if not DEPLOY_CONFIG.exists():
+    print("⚠️  deploy_config.json not found — using DEFAULTS. Run 00_preflight first to set + save "
+          "your catalog/schema/warehouse.")
+print("Target :", CFG["TARGET_CATALOG"] + "." + CFG["TARGET_SCHEMA"])
+print("Warehouse:", CFG["WAREHOUSE_ID"])
+
+
+def never_touch(cfg=CFG):
+    return [x.strip() for x in cfg.get("NEVER_TOUCH", "").split(",") if x.strip()]
 
 # COMMAND ----------
 
