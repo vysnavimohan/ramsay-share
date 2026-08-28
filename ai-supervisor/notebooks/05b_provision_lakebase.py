@@ -1,22 +1,13 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Stage 05b — Provision Lakebase + seed questions (optional)
-# MAGIC The supervisor app can surface 4 starter prompts from a Lakebase (Postgres) `seed_questions`
-# MAGIC table. This is **optional** — the app runs without it (it degrades to no starter prompts).
+# MAGIC # Stage 05b — Provision Lakebase + seed questions (required)
+# MAGIC The supervisor app surfaces its 4 starter prompts from a Lakebase (Postgres) `seed_questions`
+# MAGIC table, so Lakebase is a **required** part of this demo. The instance name comes from
+# MAGIC `00_preflight` (`lakebase_instance`, saved to `deploy_config.json`).
 # MAGIC
-# MAGIC - **`lakebase_instance` widget blank (default)** → this stage is a **no-op**. Recommended if
-# MAGIC   Lakebase isn't enabled in your workspace/region.
-# MAGIC - **`lakebase_instance` set** → ensures a Lakebase project, connects to its production branch
-# MAGIC   `databricks_postgres`, runs `seed_questions.sql` (4 rows), records host/endpoint in the
-# MAGIC   deployment manifest so Stage 06 can wire `PGHOST`.
-
-# COMMAND ----------
-
-# MAGIC %md ## ⚙️ Optional: set a Lakebase instance name (blank = skip this stage)
-
-# COMMAND ----------
-
-dbutils.widgets.text("lakebase_instance", "", "Lakebase instance name (blank => skip / no-op)")
+# MAGIC This stage ensures a Lakebase project, connects to its production branch `databricks_postgres`,
+# MAGIC runs `seed_questions.sql` (4 rows), and records host/endpoint in the deployment manifest so
+# MAGIC Stage 06 can wire `PGHOST`. It **fails** if `lakebase_instance` was not set in preflight.
 
 # COMMAND ----------
 
@@ -24,13 +15,11 @@ dbutils.widgets.text("lakebase_instance", "", "Lakebase instance name (blank => 
 
 # COMMAND ----------
 
-pid = dbutils.widgets.get("lakebase_instance").strip()
+# Lakebase is REQUIRED for this demo — the instance name comes from 00_preflight (deploy_config.json).
+pid = CFG["LAKEBASE_INSTANCE"].strip()
 if not pid:
-    manifest_put("lakebase", {"applicable": False,
-                              "note": "lakebase_instance blank — no Postgres serving layer; app starter "
-                                      "prompts disabled. Set the widget to provision."})
-    ok("no Lakebase requested — skipping (app runs without starter prompts)")
-    dbutils.notebook.exit("Stage 05b: no-op (lakebase_instance blank)")
+    fail("lakebase_instance is not set — run 00_preflight and provide a Lakebase instance name. "
+         "Lakebase is required for this demo (the supervisor app's serving layer / starter prompts).")
 
 # COMMAND ----------
 

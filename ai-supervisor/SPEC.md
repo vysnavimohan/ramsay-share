@@ -14,8 +14,7 @@
 Let any engineer stand up the AI-Supervisor demo in their own workspace by (a) **uploading two
 files** — the parquet `data/` payload to a UC Volume and `app.zip` to a workspace folder — and (b)
 running a sequence of **Databricks notebooks** that create the schema, load the 10 base tables,
-build the 8 views + 5 metric views, publish the dashboard, recreate the 4 Genie agents, optionally
-provision Lakebase, and deploy the supervisor app. Every stage is **idempotent** with an inline
+build the 8 views + 5 metric views, publish the dashboard, recreate the 4 Genie agents, provision Lakebase, and deploy the supervisor app. Every stage is **idempotent** with an inline
 verify. A `99_teardown` notebook removes everything cleanly.
 
 ## 2. Design principles
@@ -48,7 +47,7 @@ ai-supervisor/
 │   ├── dashboard.json          captured serialized dashboard
 │   └── genie.json              4 agents — tables + instructions + sample questions
 ├── data/                       parquet payload (~41 MB) — upload to your Volume
-├── seed_questions.sql          Lakebase starter prompts (optional Stage 05b)
+├── seed_questions.sql          Lakebase starter prompts (Stage 05b)
 ├── app.zip                     supervisor app source (React + FastAPI) — upload + unzip
 └── notebooks/
     ├── _common                 widgets + WorkspaceClient auth + SQL(warehouse) + remap/idempotency
@@ -58,7 +57,7 @@ ai-supervisor/
     ├── 03_load_data            COPY INTO from the uploaded Volume parquet + refresh metric views
     ├── 04_build_dashboard      publish dashboard from artefacts/dashboard.json
     ├── 05_build_genie          recreate the 4 Genie agents from artefacts/genie.json
-    ├── 05b_provision_lakebase  optional Lakebase + seed_questions (no-op if lakebase_instance blank)
+    ├── 05b_provision_lakebase  required Lakebase + seed_questions
     ├── 06_deploy_app           app.yaml (4 Genie ids + Lakebase host) + apps deploy + SP grants
     ├── 99_verify               end-to-end check + prints deliverable URLs
     └── 99_teardown             remove app/lakebase/genie/dashboard + DROP SCHEMA CASCADE (catalog kept)
@@ -74,14 +73,15 @@ ai-supervisor/
 | 03 | `03_load_data` | `COPY INTO` from uploaded Volume parquet; refresh metric views. | row counts == manifest; MEASURE on `mv_bed_occupancy` |
 | 04 | `04_build_dashboard` | publish dashboard (reuse-or-update). | target schema only + published + reachable |
 | 05 | `05_build_genie` | recreate 4 agents (delete-then-recreate). | instructions applied; Capacity smoke test (WARN if Genie One absent) |
-| 05b | `05b_provision_lakebase` | optional Lakebase + 4 seed questions. | seed_questions has 4 rows (skipped if blank) |
+| 05b | `05b_provision_lakebase` | required Lakebase + 4 seed questions. | seed_questions has 4 rows |
 | 06 | `06_deploy_app` | app.yaml (4 Genie ids + Lakebase host) + create + grant SP + SNAPSHOT deploy. | app RUNNING + URL < 500 |
 | 99 | `99_verify` / `99_teardown` | end-to-end verify; or full teardown (catalog kept). | all live / all gone, catalog intact |
 
 ## 6. Serving
 
-Optional Lakebase (Autoscaling Postgres) holds a `seed_questions` table (4 starter prompts). Blank
-`lakebase_instance` ⇒ Stage 05b is a no-op and the app runs without starter prompts.
+Lakebase (Autoscaling Postgres) holds the `seed_questions` table (4 starter prompts) the supervisor
+app surfaces. The app reads its prompts from Postgres, so Lakebase is **required** — set
+`lakebase_instance` in `00_preflight` (Stage 05b fails if unset).
 
 ## 7. Genie One caveat
 
@@ -92,5 +92,5 @@ the live answer path degrades where the model is absent. This is reported as a W
 ## 8. Configuration (widgets in `notebooks/_common`)
 
 `target_catalog` (existing), `target_schema` (new), `warehouse_id`, `staging_volume`,
-`data_volume_path`, `app_name`, `app_source_path`, `fm_endpoint`, `lakebase_instance` (blank=skip),
+`data_volume_path`, `app_name`, `app_source_path`, `lakebase_instance` (required),
 `never_touch`. No profile and no source keys.

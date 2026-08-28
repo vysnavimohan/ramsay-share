@@ -36,21 +36,22 @@ ORIGIN_SCHEMA = "ops"
 FM_ENDPOINT = "databricks-gpt-oss-120b"
 NEVER_TOUCH = "ramsay_workforce"
 
-# The ONLY parameters preflight asks for (its widgets) and saves to deploy_config.json.
+# The parameters preflight asks for (its widgets) and saves to deploy_config.json.
+# Lakebase is REQUIRED for this demo (the supervisor app's starter prompts live there).
 PARAM_DEFAULTS = {
     "target_catalog": "classic_stable_82ujqz",
     "target_schema": "ramsay_ai_supervisor",
     "warehouse_id": "7464666eb7d50c27",
     "staging_volume": "",
     "app_name": "ramsay-ai-supervisor",
+    "lakebase_instance": "ramsay-serving",
 }
 
 
 def _derive(raw):
     """Turn the saved {key: value} dict into the CFG the stages use.
-    data_volume_path is derived from the staging Volume; app_source_path (Stage 06) and
-    lakebase_instance (Stage 05b) are their own notebooks' widgets, read from raw if present;
-    never_touch/fm are fixed constants."""
+    data_volume_path is derived from the staging Volume; app_source_path (Stage 06) is that
+    notebook's own widget, read from raw if present; never_touch/fm are fixed constants."""
     g = lambda k: (raw.get(k) or PARAM_DEFAULTS.get(k, "")).strip()
     c = {
         "TARGET_CATALOG": g("target_catalog"),
@@ -59,7 +60,7 @@ def _derive(raw):
         "APP_NAME": g("app_name"),
         "FM_ENDPOINTS_REQUIRED": FM_ENDPOINT,
         "APP_SOURCE_PATH": (raw.get("app_source_path") or "").strip(),
-        "LAKEBASE_INSTANCE": (raw.get("lakebase_instance") or "").strip(),
+        "LAKEBASE_INSTANCE": g("lakebase_instance"),
         "NEVER_TOUCH": NEVER_TOUCH,
     }
     sv = g("staging_volume")

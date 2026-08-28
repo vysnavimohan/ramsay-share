@@ -60,10 +60,10 @@ else:
     problems.append("no Genie spaces recorded (run Stage 05)")
 
 lb = manifest_get("lakebase", {})
-if lb.get("applicable"):
+if lb.get("applicable") and lb.get("host"):
     ok(f"Lakebase provisioned: {lb.get('host')}")
 else:
-    ok("Lakebase not provisioned (optional — app runs without starter prompts)")
+    problems.append("Lakebase not provisioned — run Stage 05b (required for the app's serving layer)")
 
 app = manifest_get("app", {})
 if app.get("name"):

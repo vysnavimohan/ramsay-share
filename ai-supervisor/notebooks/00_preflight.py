@@ -22,8 +22,9 @@ dbutils.widgets.text("target_schema", "ramsay_ai_supervisor", "2. Target schema 
 dbutils.widgets.text("warehouse_id", "7464666eb7d50c27", "3. SQL warehouse id (runs all SQL)")
 dbutils.widgets.text("staging_volume", "", "4. Staging Volume catalog.schema.volume (blank => <cat>.<sch>._staging)")
 dbutils.widgets.text("app_name", "ramsay-ai-supervisor", "5. Databricks App name (<=30 chars)")
+dbutils.widgets.text("lakebase_instance", "ramsay-serving", "6. Lakebase instance name (required — serving layer)")
 # Fixed (not widgets): LLM endpoint = databricks-gpt-oss-120b; teardown safety = ramsay_workforce.
-# app_source_path is asked for in Stage 06; lakebase_instance in Stage 05b (the notebooks that use them).
+# app_source_path is asked for in Stage 06 (the notebook that uses it).
 
 # COMMAND ----------
 
@@ -46,13 +47,16 @@ print(f"    schema   (target)   : {sch}")
 print(f"    warehouse           : {CFG['WAREHOUSE_ID']}")
 print(f"    staging volume      : {CFG['STAGING_VOLUME']}")
 print(f"    data volume path    : {CFG['DATA_VOLUME_PATH']}")
-print(f"    lakebase instance   : {CFG['LAKEBASE_INSTANCE'] or '(blank — Stage 05b no-op)'}")
+print(f"    lakebase instance   : {CFG['LAKEBASE_INSTANCE']}")
 if not cat:
     fail("target_catalog is empty — set it to an EXISTING catalog and re-run.")
 if not sch:
     fail("target_schema is empty — set it to the schema to build into and re-run.")
 if not CFG["WAREHOUSE_ID"]:
     fail("warehouse_id is empty — set it to a running SQL warehouse and re-run.")
+if not CFG["LAKEBASE_INSTANCE"]:
+    fail("lakebase_instance is empty — Lakebase is required for this demo (the app's serving "
+         "layer / starter prompts). Set a Lakebase instance name and re-run.")
 
 # COMMAND ----------
 

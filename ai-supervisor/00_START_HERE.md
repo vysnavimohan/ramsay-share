@@ -10,7 +10,8 @@ as a captured artefact and is remapped onto your target catalog/schema at build 
    agents → synthesise, with an SSE answer trace.
 2. **AI/BI dashboard** "Ramsay Health — Group Operations (5 Hospitals)".
 3. **4 Genie agents** — Capacity · Patient Activity & Finance · Throughput & Flow · Workforce.
-4. *(optional)* **Lakebase** serving store + `seed_questions` starter prompts.
+4. **Lakebase** serving store + `seed_questions` starter prompts (**required** — the app reads its
+   prompts from Postgres).
 
 ---
 
@@ -60,7 +61,7 @@ that folder.
 | `app_name` | app name (≤30) | `ramsay-ai-supervisor` |
 | `app_source_path` | unzipped app folder | `/Workspace/Users/you/ramsay-ai-supervisor-app` |
 | `fm_endpoint` | app LLM endpoint | `databricks-gpt-oss-120b` |
-| `lakebase_instance` | **blank = skip Lakebase** (recommended) | |
+| `lakebase_instance` | **required** — Lakebase instance name (app's serving layer) | `ramsay-serving` |
 | `never_touch` | catalogs/ids teardown must never remove | `ramsay_workforce` |
 
 ## Step 5 — Run the notebooks in order
@@ -73,7 +74,7 @@ that folder.
 | 03 | `03_load_data` | `COPY INTO` from the staged Volume parquet + refresh metric views |
 | 04 | `04_build_dashboard` | publishes the Group-Operations dashboard |
 | 05 | `05_build_genie` | recreates the 4 Genie agents; smoke-tests Capacity (WARN if Genie One absent) |
-| 05b | `05b_provision_lakebase` | optional Lakebase + seed_questions (no-op if `lakebase_instance` blank) |
+| 05b | `05b_provision_lakebase` | **required** — provisions Lakebase + seed_questions (fails if `lakebase_instance` unset) |
 | 06 | `06_deploy_app` | deploys the supervisor app (4 Genie ids wired, SP grants, SNAPSHOT) |
 | 99 | `99_verify` | end-to-end check + prints deliverable URLs |
 
