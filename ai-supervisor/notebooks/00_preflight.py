@@ -23,7 +23,7 @@ dbutils.widgets.text("warehouse_id", "7464666eb7d50c27", "3. SQL warehouse id (r
 dbutils.widgets.text("lakebase_instance", "ramsay-serving", "4. Lakebase instance name (required — serving layer)")
 # Fixed (not widgets): app name = ramsay-ai-supervisor; LLM endpoint = databricks-gpt-oss-120b;
 # teardown safety = ramsay_workforce. The staging Volume is always derived to <cat>.<sch>._staging.
-# app_source_path is asked for in Stage 06 (the notebook that uses it).
+# The app source ships as app.zip and is auto-extracted by Stage 06 (no widget).
 
 # COMMAND ----------
 

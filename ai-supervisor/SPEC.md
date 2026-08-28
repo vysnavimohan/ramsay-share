@@ -48,7 +48,7 @@ ai-supervisor/
 │   └── genie.json              4 agents — tables + instructions + sample questions
 ├── data/                       parquet payload (~41 MB) — upload to your Volume
 ├── seed_questions.sql          Lakebase starter prompts (Stage 05b)
-├── app.zip                     supervisor app source (React + FastAPI) — upload + unzip
+├── app.zip                     supervisor app source (React + FastAPI) — Stage 06 auto-extracts it
 └── notebooks/
     ├── _common                 widgets + WorkspaceClient auth + SQL(warehouse) + remap/idempotency
     ├── 00_preflight            auth, UC, catalog-exists, warehouse, FM endpoint
@@ -95,5 +95,5 @@ Just **4** parameters: `target_catalog` (existing), `target_schema` (new), `ware
 `lakebase_instance` (required). Set in `00_preflight`, saved to `deploy_config.json`, reused by
 every later notebook. **Fixed / derived (not asked):** app name = `ramsay-ai-supervisor`;
 staging Volume derived to `<catalog>.<schema>._staging`; FM endpoint = `databricks-gpt-oss-120b`;
-teardown guard = `ramsay_workforce`. `app_source_path` is a Stage-06-only widget. No profile, no
+teardown guard = `ramsay_workforce`. Stage 06 auto-extracts the bundled `app.zip` (no widget). No profile, no
 source keys.

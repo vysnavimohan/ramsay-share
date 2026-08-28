@@ -1,9 +1,10 @@
 # Ramsay Shift-Cover — Notebook Deployment (START HERE)
 
-Stand up the entire Shift-Cover demo in your Databricks workspace by **uploading two files by
-hand** and then **running a set of notebooks**. The package is fully self-contained — it reads
-**no source workspace**. Every object (13 UC objects + dashboard + Genie space + app) ships as a
-captured artefact and is remapped onto your target catalog/schema at build time.
+Stand up the entire Shift-Cover demo in your Databricks workspace by **running a set of
+notebooks** — everything (data, app, artefacts) ships inside the package, so there is nothing to
+upload by hand. The package is fully self-contained — it reads **no source workspace**. Every
+object (13 UC objects + dashboard + Genie space + app) ships as a captured artefact and is remapped
+onto your target catalog/schema at build time.
 
 ## The three deliverables
 1. **App** `ramsay-shift-cover` — FastAPI + React. Positions-to-fill board (ranked internal cover
@@ -41,11 +42,9 @@ reads it). Just set the widgets (Step 4) and run 01b — that's it.
 > (`01b` creates it). Upload the `data/` subfolders there via **Catalog → Volume → Upload** so the
 > layout is `/Volumes/<catalog>/<schema>/_staging/<table>/*.parquet`, and skip 01b.
 
-## Step 3 — Manual upload: the app (zip)
-1. Upload **`app.zip`** into your workspace and **unzip** it to a folder, e.g.
-   `/Workspace/Users/<you>/ramsay-shift-cover-app` (contains `app.py`, `frontend/`, `server/`, …).
-2. Set the `app_source_path` widget (Stage 06) to that folder. (Leave blank only if you unzipped it
-   to an `app/` folder beside the notebooks.)
+## Step 3 — The app (no manual step)
+The app source ships inside this package as **`app.zip`**. **Stage 06 extracts and deploys it
+automatically** — nothing to upload, unzip, or configure.
 
 ## Step 4 — Set the widgets (top of `00_preflight` — the ONLY notebook with widgets)
 Just **3** parameters. Everything else is derived or fixed.
@@ -59,7 +58,7 @@ Fixed / derived (you do NOT set these):
 - **app name** = `ramsay-shift-cover` (hard-coded)
 - **staging Volume** = derived to `<catalog>.<schema>._staging` (created inside the target schema by `01b`)
 - **FM endpoint** = `databricks-gpt-oss-120b`; **teardown guard** = `ramsay_health`
-- **`app_source_path`** — set on **Stage 06** (the notebook that unzips + deploys the app)
+- **app source** — Stage 06 auto-extracts the bundled `app.zip` (no input)
 
 ## Step 5 — Run the notebooks in order
 | # | Notebook | Does |

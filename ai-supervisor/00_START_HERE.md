@@ -1,9 +1,10 @@
 # Ramsay AI-Supervisor (Group Operations) — Notebook Deployment (START HERE)
 
-Stand up the AI-Supervisor demo in your Databricks workspace by **uploading two files by hand**
-and then **running a set of notebooks**. The package is fully self-contained — it reads **no source
-workspace**. Every object (23 UC objects + AI/BI dashboard + 4 Genie agents + supervisor app) ships
-as a captured artefact and is remapped onto your target catalog/schema at build time.
+Stand up the AI-Supervisor demo in your Databricks workspace by **running a set of notebooks** —
+everything (data, app, artefacts) ships inside the package, so there is nothing to upload by hand.
+The package is fully self-contained — it reads **no source workspace**. Every object (23 UC objects
++ AI/BI dashboard + 4 Genie agents + supervisor app) ships as a captured artefact and is remapped
+onto your target catalog/schema at build time.
 
 ## The deliverables
 1. **AI-Supervisor App** `ramsay-ai-supervisor` — React + FastAPI. Decompose → route → 4 Genie
@@ -46,10 +47,9 @@ it from the Git folder into the Volume — no laptop, no manual upload.
 > (or `databricks fs cp`) so the layout is `/Volumes/<catalog>/<schema>/<volume>/<table>/*.parquet`,
 > then re-run 01b (its verify only checks the parquet is on the Volume, however it got there).
 
-## Step 3 — Manual upload: the app (zip, ~14 MB)
-Upload **`app.zip`** into your workspace and **unzip** it to a folder, e.g.
-`/Workspace/Users/<you>/ramsay-ai-supervisor-app`. Set the `app_source_path` widget (Stage 06) to
-that folder.
+## Step 3 — The app (no manual step)
+The app source ships inside this package as **`app.zip`**. **Stage 06 extracts and deploys it
+automatically** — nothing to upload, unzip, or configure.
 
 ## Step 4 — Set the widgets (top of `00_preflight` — the ONLY notebook with widgets)
 Just **4** parameters. Everything else is derived or fixed.
@@ -64,7 +64,7 @@ Fixed / derived (you do NOT set these):
 - **app name** = `ramsay-ai-supervisor` (hard-coded)
 - **staging Volume** = derived to `<catalog>.<schema>._staging` (created inside the target schema)
 - **FM endpoint** = `databricks-gpt-oss-120b`; **teardown guard** = `ramsay_workforce`
-- **`app_source_path`** — set on **Stage 06** (the notebook that unzips + deploys the app)
+- **app source** — Stage 06 auto-extracts the bundled `app.zip` (no input)
 
 ## Step 5 — Run the notebooks in order
 | # | Notebook | Does |

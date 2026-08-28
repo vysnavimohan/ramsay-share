@@ -22,7 +22,7 @@ dbutils.widgets.text("target_schema", "ramsay_shiftcover", "2. Target schema (cr
 dbutils.widgets.text("warehouse_id", "7464666eb7d50c27", "3. SQL warehouse id (runs all SQL)")
 # Fixed (not widgets): app name = ramsay-shift-cover; LLM endpoint = databricks-gpt-oss-120b;
 # teardown safety = ramsay_health. The staging Volume is always derived to <cat>.<sch>._staging.
-# app_source_path is asked for in Stage 06 (the only notebook that needs it).
+# The app source ships as app.zip and is auto-extracted by Stage 06 (no widget).
 
 # COMMAND ----------
 

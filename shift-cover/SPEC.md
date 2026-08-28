@@ -64,7 +64,7 @@ shift-cover/
 │   ├── dashboard.json          captured serialized dashboard
 │   └── genie.json              captured Genie tables + 24 instructions
 ├── data/  (+ data.zip)         parquet payload — upload to your Volume
-├── app.zip                     app source (FastAPI + React, prebuilt frontend) — upload + unzip
+├── app.zip                     app source (FastAPI + React, prebuilt frontend) — Stage 06 auto-extracts it
 └── notebooks/
     ├── _common                 widgets + WorkspaceClient auth + SQL(warehouse) + remap/idempotency helpers
     ├── 00_preflight            auth, UC, catalog-exists, warehouse, FM endpoint
@@ -102,5 +102,5 @@ Genie space's 24 instructions (carried in Stage 05) — there is no separate `se
 Just **3** parameters: `target_catalog` (existing), `target_schema` (new), `warehouse_id`. Set in
 `00_preflight`, saved to `deploy_config.json`, reused by every later notebook. **Fixed / derived
 (not asked):** app name = `ramsay-shift-cover`; staging Volume derived to `<catalog>.<schema>._staging`;
-FM endpoint = `databricks-gpt-oss-120b`; teardown guard = `ramsay_health`. `app_source_path` is a
-Stage-06-only widget. No profile, no source keys — the notebook authenticates as its own runtime identity.
+FM endpoint = `databricks-gpt-oss-120b`; teardown guard = `ramsay_health`. Stage 06 auto-extracts
+the bundled `app.zip` (no widget). No profile, no source keys — the notebook authenticates as its own runtime identity.

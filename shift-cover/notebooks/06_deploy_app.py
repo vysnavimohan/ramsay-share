@@ -3,12 +3,9 @@
 # MAGIC # Stage 06 — Deploy the Shift-Cover App (idempotent)
 # MAGIC Deploys the FastAPI+React app against your target resources.
 # MAGIC
-# MAGIC ### Manual step (once, before this stage)
-# MAGIC Upload **`app.zip`** (ships in this package) into the workspace and unzip it to a folder,
-# MAGIC then set the `app_source_path` widget to that folder (e.g.
-# MAGIC `/Workspace/Users/<you>/ramsay-shift-cover-app`). If you leave `app_source_path` blank, this
-# MAGIC stage will look for an unzipped `app/` beside the notebooks in the repo folder.
-# MAGIC See `00_START_HERE.md`.
+# MAGIC ### No input needed
+# MAGIC The app source ships **inside this package** as `app.zip`. This stage extracts it
+# MAGIC automatically and deploys from it — no manual upload, no unzip, no widget to set.
 # MAGIC
 # MAGIC What it does: generates `app.yaml` (target warehouse + `CATALOG_SCHEMA` + the new Genie id
 # MAGIC from Stage 05), creates the app if absent, grants the app **SP before first run** (warehouse
@@ -17,19 +14,12 @@
 
 # COMMAND ----------
 
-# MAGIC %md ## ⚙️ Stage 06 needs ONE input: where you unzipped `app.zip`
-
-# COMMAND ----------
-
-dbutils.widgets.text("app_source_path", "", "Workspace path to the unzipped app source (e.g. /Workspace/Users/you/ramsay-shift-cover-app)")
-
-# COMMAND ----------
-
 # MAGIC %run ./_common
 
 # COMMAND ----------
 
 import urllib.request, urllib.error
+import zipfile, tempfile
 from databricks.sdk.service.workspace import ImportFormat
 
 sql = target_sql()
@@ -37,16 +27,20 @@ w = sql.w
 cat, sch = CFG["TARGET_CATALOG"], CFG["TARGET_SCHEMA"]
 name = CFG["APP_NAME"][:30].rstrip("-")
 
-# resolve the uploaded app source (this notebook's own widget)
-src = dbutils.widgets.get("app_source_path").strip()
-if src:
-    app_src = Path("/Workspace" + src) if not src.startswith("/Workspace") else Path(src)
-else:
-    app_src = PKG / "app"
-if not app_src.exists():
-    fail(f"app source not found at {app_src} — upload+unzip app.zip and set the app_source_path "
-         f"widget (see 00_START_HERE.md)")
-ok(f"app source: {app_src}")
+# resolve the app source: extract the bundled app.zip (path is relative to this package)
+app_zip = PKG / "app.zip"
+if not app_zip.exists():
+    fail(f"bundled app source not found at {app_zip} — the package is incomplete")
+extract_dir = Path(tempfile.mkdtemp(prefix=f"{name}-"))
+with zipfile.ZipFile(app_zip) as z:
+    z.extractall(extract_dir)
+app_src = extract_dir
+# if the zip wrapped everything in a single top-level folder, descend into it
+if not (app_src / "app.py").exists():
+    subdirs = [d for d in app_src.iterdir() if d.is_dir()]
+    if len(subdirs) == 1 and (subdirs[0] / "app.py").exists():
+        app_src = subdirs[0]
+ok(f"app source: {app_src} (extracted from {app_zip.name})")
 
 
 def gen_app_yaml():
