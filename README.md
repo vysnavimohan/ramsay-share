@@ -11,13 +11,41 @@ your target catalog/schema at build time.
 
 ## How to deploy (both packages, same shape)
 1. Add this repo as a **Git folder** in your Databricks workspace (or import the package folder).
-2. **Upload the data**: the package's `data/` parquet → a target UC Volume.
-3. **Upload the app**: `app.zip` → a workspace folder, unzip it.
-4. Set the widgets at the top of `notebooks/_common`.
-5. Run `notebooks/00 → 06` then `99_verify`. Every stage is **idempotent** and self-verifies.
-6. When done, run `notebooks/99_teardown` to remove everything (the catalog is never dropped).
+2. **⚙️ Set the widgets FIRST** — see the next section. This is where you choose the catalog, schema
+   and Volume. The notebooks do **not** prompt you; they read these widgets.
+3. Run `00_preflight` to confirm your selection + workspace readiness.
+4. Run `01_validate_shipped` → `01b_stage_data_to_volume` (copies the shipped `data/` into your
+   Volume — no laptop) → `02_create_schema` → `03_load_data` → `04_build_dashboard` →
+   `05_build_genie`.
+5. **Upload the app**: `app.zip` → a workspace folder, unzip it, set `app_source_path`, run
+   `06_deploy_app`.
+6. Run `99_verify`. Every stage is **idempotent** and self-verifies.
+7. When done, run `99_teardown` to remove everything (the catalog is never dropped).
 
-See each package's **`00_START_HERE.md`** for the step-by-step.
+See each package's **`00_START_HERE.md`** for the click-by-click.
+
+## ⚙️ Set these widgets before running anything
+
+The widgets live at the **top of every notebook** (they're defined once in `notebooks/_common` and
+shared). Open `00_preflight`, set them, then run. **You must set these — there is no prompt:**
+
+| Widget | What to enter | Example |
+|---|---|---|
+| `target_catalog` | an **existing** catalog (the package creates only a *schema* inside it — it never creates a catalog) | `classic_stable_82ujqz` |
+| `target_schema` | the schema to build the demo into (created if absent) | `ramsay_demo_test` |
+| `warehouse_id` | a running SQL warehouse id | `7464666eb7d50c27` |
+| `staging_volume` | the UC Volume the parquet is staged into, as `catalog.schema.volume` | `classic_stable_82ujqz.ramsay_demo_test.ramsay_demo_test` |
+| `data_volume_path` | the `/Volumes/...` path for that Volume (usually auto-derived; set it if your Volume name differs from the default `_staging`) | `/Volumes/classic_stable_82ujqz/ramsay_demo_test/ramsay_demo_test` |
+| `app_name` | Databricks App name (≤30 chars) | `ramsay-shift-cover` |
+| `app_source_path` | (Stage 06 only) the workspace folder where you unzipped `app.zip` | `/Workspace/Users/you/ramsay-shift-cover-app` |
+| `fm_endpoint` | Foundation-model endpoint for the app | `databricks-gpt-oss-120b` |
+| `never_touch` | catalogs/ids `99_teardown` must never remove | `ramsay_health` |
+
+> **Create the schema + Volume yourself, or let 01b do it.** `01b_stage_data_to_volume` will
+> `CREATE SCHEMA IF NOT EXISTS` + `CREATE VOLUME IF NOT EXISTS` for you and copy the data in. If you
+> created them by hand first, just point the widgets at what you made.
+> If your Volume name is **not** the default `_staging` (e.g. you named it `ramsay_demo_test`), set
+> **both** `staging_volume` and `data_volume_path` explicitly so the notebooks find the data.
 
 ## Requirements
 - A **target catalog that already exists** (the packages create only a *schema* inside it).
