@@ -34,11 +34,16 @@ Add this repo as a **Git folder** (`https://github.com/vysnavimohan/ramsay-share
 `ai-supervisor/` folder. Notebooks resolve sibling `ddl/`, `artefacts/`, `MANIFEST.json` from their
 own path — keep the structure intact.
 
-## Step 2 — Manual upload: the data (parquet, ~41 MB)
-Upload this package's **`data/`** folder into a target **UC Volume** (e.g.
-`<catalog>.<schema>._staging`) so the layout is `/Volumes/<catalog>/<schema>/_staging/<table>/*.parquet`.
-Stage 03 creates the staging Volume if it doesn't exist — run it once, upload, re-run. Point the
-`data_volume_path` widget at that base if it isn't the default staging Volume.
+## Step 2 — The data (parquet, ~41 MB)
+The parquet payload ships **inside this Git folder** at **`ai-supervisor/data/`** (10 subfolders,
+one per table). Notebook **`01b_stage_data_to_volume`** creates the schema + a UC Volume and copies
+it from the Git folder into the Volume — no laptop, no manual upload.
+
+> **Large-file caveat:** this package's data is ~41 MB with a ~26 MB `tbwlmds` parquet. Databricks
+> Git folders enforce a per-file size limit, so a large table may not check out. If `01b` reports a
+> missing/empty table, upload that table's parquet to the Volume via **Catalog → Volume → Upload**
+> (or `databricks fs cp`) so the layout is `/Volumes/<catalog>/<schema>/<volume>/<table>/*.parquet`,
+> then re-run 01b (its verify only checks the parquet is on the Volume, however it got there).
 
 ## Step 3 — Manual upload: the app (zip, ~14 MB)
 Upload **`app.zip`** into your workspace and **unzip** it to a folder, e.g.
@@ -63,8 +68,9 @@ that folder.
 |---|---|---|
 | 00 | `00_preflight` | auth, UC, catalog exists, warehouse, FM endpoint |
 | 01 | `01_validate_shipped` | confirms shipped DDL + parquet + manifest |
+| 01b | `01b_stage_data_to_volume` | creates schema + Volume, copies `data/` from the Git folder into the Volume (no laptop) |
 | 02 | `02_create_schema` | creates schema + all 23 objects (idempotent) |
-| 03 | `03_load_data` | `COPY INTO` from the uploaded Volume parquet + refresh metric views |
+| 03 | `03_load_data` | `COPY INTO` from the staged Volume parquet + refresh metric views |
 | 04 | `04_build_dashboard` | publishes the Group-Operations dashboard |
 | 05 | `05_build_genie` | recreates the 4 Genie agents; smoke-tests Capacity (WARN if Genie One absent) |
 | 05b | `05b_provision_lakebase` | optional Lakebase + seed_questions (no-op if `lakebase_instance` blank) |

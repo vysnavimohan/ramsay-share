@@ -28,18 +28,18 @@ Add this repo as a **Git folder** in your workspace (Repos → Add Repo →
 resolve their sibling `ddl/`, `artefacts/`, `MANIFEST.json` automatically from their own path — keep
 the folder structure intact.
 
-## Step 2 — Manual upload: the data (parquet)
-The tables load from a parquet snapshot that ships in `data/`.
-1. Create (or pick) a **UC Volume** on your target — e.g. `<catalog>.<schema>._staging` (Stage 03
-   will create this staging Volume for you if it doesn't exist yet; create the schema+volume first
-   if you prefer, or just run Stage 03 once, let it make the volume, upload, and re-run).
-2. Upload the contents of this package's **`data/`** folder into that Volume so the layout is:
-   ```
-   /Volumes/<catalog>/<schema>/_staging/<table>/*.parquet
-   ```
-   Easiest path: unzip `data.zip` and drag the `data/` subfolders into the Volume via
-   **Catalog → Volume → Upload**, or use `databricks fs cp -r data/ dbfs:/Volumes/.../_staging/`.
-3. Point the `data_volume_path` widget at that base path if it isn't the default staging Volume.
+## Step 2 — The data (parquet) — no laptop needed
+The tables load from a parquet snapshot that ships **inside this Git folder** at **`shift-cover/data/`**
+(6 subfolders, one per table). Because it's in the repo, Databricks already checked it out into your
+workspace when you added the Git folder — you do **not** download to a laptop or upload by hand.
+
+Notebook **`01b_stage_data_to_volume`** creates the schema + a UC Volume and copies
+`data/<table>/*.parquet` from the Git folder straight into the Volume (where Stage 03's `COPY INTO`
+reads it). Just set the widgets (Step 4) and run 01b — that's it.
+
+> Prefer to do it by hand instead? Create a Volume, then **Catalog → Volume → Upload** the `data/`
+> subfolders so the layout is `/Volumes/<catalog>/<schema>/<volume>/<table>/*.parquet`, and skip 01b.
+> Either way, point the `staging_volume` / `data_volume_path` widgets at your Volume.
 
 ## Step 3 — Manual upload: the app (zip)
 1. Upload **`app.zip`** into your workspace and **unzip** it to a folder, e.g.
@@ -66,8 +66,9 @@ Open **`notebooks/_common`** and set the widgets at the top (they persist across
 |---|---|---|
 | 00 | `00_preflight` | auth, UC, catalog exists, warehouse, FM endpoint |
 | 01 | `01_validate_shipped` | confirms shipped DDL + parquet + manifest are consistent |
+| 01b | `01b_stage_data_to_volume` | creates schema + Volume, copies `data/` from the Git folder into the Volume (no laptop) |
 | 02 | `02_create_schema` | creates schema + all 13 objects (idempotent) |
-| 03 | `03_load_data` | `COPY INTO` from the uploaded Volume parquet + refresh MV |
+| 03 | `03_load_data` | `COPY INTO` from the staged Volume parquet + refresh MV |
 | 04 | `04_build_dashboard` | publishes the dashboard from the shipped definition |
 | 05 | `05_build_genie` | recreates the Genie space + 24 instructions, smoke-tests |
 | 06 | `06_deploy_app` | deploys the app (grants SP, SNAPSHOT deploy) |
