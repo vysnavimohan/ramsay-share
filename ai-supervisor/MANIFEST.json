@@ -177,6 +177,11 @@
       "refs": [
         "tbwlmds"
       ]
+    },
+    "vwah_unavailability": {
+      "type": "MANAGED",
+      "origin": "genie_workforce_agent",
+      "refs": []
     }
   },
   "order": [
@@ -198,6 +203,7 @@
     "vw_theatre_throughput",
     "mv_theatre_util",
     "vwah_hoursassignment",
+    "vwah_unavailability",
     "mv_workforce_hours",
     "vw_capacity_forecast",
     "vw_diagnostic_capacity",
@@ -214,7 +220,8 @@
     "tbinvoice",
     "tbreferrals",
     "tbwlmds",
-    "vwah_hoursassignment"
+    "vwah_hoursassignment",
+    "vwah_unavailability"
   ],
   "row_counts": {
     "dim_site": 5,
@@ -226,7 +233,8 @@
     "tbinvoice": 66862,
     "tbreferrals": 311166,
     "tbwlmds": 311166,
-    "vwah_hoursassignment": 83393
+    "vwah_hoursassignment": 83393,
+    "vwah_unavailability": 21125
   },
   "by_type": {
     "MANAGED": [
@@ -239,7 +247,8 @@
       "tbinvoice",
       "tbreferrals",
       "tbwlmds",
-      "vwah_hoursassignment"
+      "vwah_hoursassignment",
+      "vwah_unavailability"
     ],
     "VIEW": [
       "vw_bed_occupancy",
