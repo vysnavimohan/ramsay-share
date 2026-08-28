@@ -1,14 +1,15 @@
 # Databricks notebook source
 # MAGIC %md
 # MAGIC # Stage 05b — Provision Lakebase + seed questions (required)
-# MAGIC The supervisor app surfaces its 4 starter prompts from a Lakebase (Postgres) `seed_questions`
-# MAGIC table, so Lakebase is a **required** part of this demo. The instance name comes from
-# MAGIC `00_preflight` (`lakebase_instance`, saved to `deploy_config.json`).
+# MAGIC The supervisor app renders its sidebar history + starter prompts from Lakebase (Postgres)
+# MAGIC `conversations`/`messages`/`traces` tables, so Lakebase is a **required** part of this demo.
+# MAGIC The instance name comes from `00_preflight` (`lakebase_instance`, saved to `deploy_config.json`).
 # MAGIC
 # MAGIC This stage **creates the Lakebase Database Instance** (autoscaling) if it doesn't exist,
-# MAGIC connects to its `databricks_postgres` database, runs `seed_questions.sql` (4 rows), and records
-# MAGIC the instance name + host in the deployment manifest so Stage 06 can wire `PGHOST` /
-# MAGIC `LAKEBASE_INSTANCE`. It **fails** if `lakebase_instance` was not set in preflight.
+# MAGIC connects to its `databricks_postgres` database, runs `seed_lakebase.sql` (an exact mirror of
+# MAGIC UK-South's chat history — 8 conversations, 22 messages, 11 traces), and records the instance
+# MAGIC name + host in the deployment manifest so Stage 06 can wire `PGHOST` / `LAKEBASE_INSTANCE`.
+# MAGIC It **fails** if `lakebase_instance` was not set in preflight.
 
 # COMMAND ----------
 
@@ -37,7 +38,7 @@ import psycopg
 from databricks.sdk.service.database import DatabaseInstance
 
 w = target_sql().w
-SEED_SQL = (PKG / "seed_questions.sql").read_text()
+SEED_SQL = (PKG / "seed_lakebase.sql").read_text()
 
 # The supervisor app (server/db.py) connects to a Lakebase **Database Instance** by name:
 # it mints creds via generate_database_credential(instance_names=[<name>]) and connects to the
@@ -65,14 +66,18 @@ import uuid
 tok = db.generate_database_credential(instance_names=[pid], request_id=str(uuid.uuid4())).token
 user = w.current_user.me().user_name
 
-# 3. seed the starter prompts into databricks_postgres
+# 3. seed the chat history (conversations/messages/traces) — exact mirror of UK-South.
+#    The app (server/db.py) reads these tables to render the sidebar + starter prompts.
 conn = psycopg.connect(host=host, user=user, password=tok, dbname="databricks_postgres", sslmode="require")
 with conn, conn.cursor() as cur:
     cur.execute(SEED_SQL)
-    cur.execute("SELECT count(*) FROM seed_questions")
-    n = cur.fetchone()[0]
-if n != 4:
-    fail(f"seed_questions has {n} rows, expected 4")
-ok(f"seeded seed_questions ({n} rows)")
+    counts = {}
+    for t in ("conversations", "messages", "traces"):
+        cur.execute(f"SELECT count(*) FROM {t}")
+        counts[t] = cur.fetchone()[0]
+if counts.get("conversations", 0) < 1:
+    fail(f"seed loaded no conversations — got {counts}")
+ok(f"seeded chat history: {counts['conversations']} conversations, "
+   f"{counts['messages']} messages, {counts['traces']} traces")
 manifest_put("lakebase", {"applicable": True, "instance": pid, "host": host})
 print(f"\nStage 05b: Lakebase ready — instance '{pid}' at {host}")

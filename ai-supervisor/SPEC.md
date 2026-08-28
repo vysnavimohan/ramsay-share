@@ -2,7 +2,7 @@
 
 **This demo:** Ramsay AI-Supervisor / Group Operations (5 hospitals).
 **Package:** `ai-supervisor/` — `notebooks/00..06 + 05b + 99_verify + 99_teardown` + shipped `ddl/`,
-`artefacts/`, `data/`, `app.zip`, `MANIFEST.json`, `seed_questions.sql`.
+`artefacts/`, `data/`, `app.zip`, `MANIFEST.json`, `seed_lakebase.sql`.
 
 > The package stands up the entire demo in a Databricks workspace from **manual uploads +
 > notebooks**. It is **self-contained**: it reads **no source workspace**. Every object ships as a
@@ -47,7 +47,7 @@ ai-supervisor/
 │   ├── dashboard.json          captured serialized dashboard
 │   └── genie.json              4 agents — tables + instructions + sample questions
 ├── data/                       parquet payload (~41 MB) — upload to your Volume
-├── seed_questions.sql          Lakebase starter prompts (Stage 05b)
+├── seed_lakebase.sql           Lakebase chat history seed — mirror of UK-South (Stage 05b)
 ├── app.zip                     supervisor app source (React + FastAPI) — Stage 06 auto-extracts it
 └── notebooks/
     ├── _common                 widgets + WorkspaceClient auth + SQL(warehouse) + remap/idempotency
@@ -57,7 +57,7 @@ ai-supervisor/
     ├── 03_load_data            COPY INTO from the uploaded Volume parquet + refresh metric views
     ├── 04_build_dashboard      publish dashboard from artefacts/dashboard.json
     ├── 05_build_genie          recreate the 4 Genie agents from artefacts/genie.json
-    ├── 05b_provision_lakebase  required Lakebase + seed_questions
+    ├── 05b_provision_lakebase  required Lakebase instance + seed chat history
     ├── 06_deploy_app           app.yaml (4 Genie ids + Lakebase host) + apps deploy + SP grants
     ├── 99_verify               end-to-end check + prints deliverable URLs
     └── 99_teardown             remove app/lakebase/genie/dashboard + DROP SCHEMA CASCADE (catalog kept)
@@ -73,15 +73,16 @@ ai-supervisor/
 | 03 | `03_load_data` | `COPY INTO` from uploaded Volume parquet; refresh metric views. | row counts == manifest; MEASURE on `mv_bed_occupancy` |
 | 04 | `04_build_dashboard` | publish dashboard (reuse-or-update). | target schema only + published + reachable |
 | 05 | `05_build_genie` | recreate 4 agents (delete-then-recreate). | instructions applied; Capacity smoke test (WARN if Genie One absent) |
-| 05b | `05b_provision_lakebase` | required Lakebase + 4 seed questions. | seed_questions has 4 rows |
+| 05b | `05b_provision_lakebase` | create Lakebase instance + seed chat history (mirror of UK-South). | conversations/messages/traces loaded |
 | 06 | `06_deploy_app` | app.yaml (4 Genie ids + Lakebase host) + create + grant SP + SNAPSHOT deploy. | app RUNNING + URL < 500 |
 | 99 | `99_verify` / `99_teardown` | end-to-end verify; or full teardown (catalog kept). | all live / all gone, catalog intact |
 
 ## 6. Serving
 
-Lakebase (Autoscaling Postgres) holds the `seed_questions` table (4 starter prompts) the supervisor
-app surfaces. The app reads its prompts from Postgres, so Lakebase is **required** — set
-`lakebase_instance` in `00_preflight` (Stage 05b fails if unset).
+Lakebase (Autoscaling Postgres) holds the `conversations`/`messages`/`traces` tables the supervisor
+app surfaces as its sidebar history + starter prompts. Stage 05b seeds them from `seed_lakebase.sql`
+(an exact mirror of UK-South: 8 conversations, 22 messages, 11 traces). Lakebase is **required** —
+set `lakebase_instance` in `00_preflight` (Stage 05b fails if unset).
 
 ## 7. Genie One caveat
 

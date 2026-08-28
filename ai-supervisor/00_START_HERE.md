@@ -11,8 +11,8 @@ onto your target catalog/schema at build time.
    agents → synthesise, with an SSE answer trace.
 2. **AI/BI dashboard** "Ramsay Health — Group Operations (5 Hospitals)".
 3. **4 Genie agents** — Capacity · Patient Activity & Finance · Throughput & Flow · Workforce.
-4. **Lakebase** serving store + `seed_questions` starter prompts (**required** — the app reads its
-   prompts from Postgres).
+4. **Lakebase** serving store + seeded chat history (**required** — the app reads its
+   conversation sidebar + starter prompts from Postgres; seeded to mirror UK-South).
 
 ---
 
@@ -76,7 +76,7 @@ Fixed / derived (you do NOT set these):
 | 03 | `03_load_data` | `COPY INTO` from the staged Volume parquet + refresh metric views |
 | 04 | `04_build_dashboard` | publishes the Group-Operations dashboard |
 | 05 | `05_build_genie` | recreates the 4 Genie agents; smoke-tests Capacity (WARN if Genie One absent) |
-| 05b | `05b_provision_lakebase` | **required** — provisions Lakebase + seed_questions (fails if `lakebase_instance` unset) |
+| 05b | `05b_provision_lakebase` | **required** — creates Lakebase instance + seeds chat history from `seed_lakebase.sql` (fails if `lakebase_instance` unset) |
 | 06 | `06_deploy_app` | deploys the supervisor app (4 Genie ids wired, SP grants, SNAPSHOT) |
 | 99 | `99_verify` | end-to-end check + prints deliverable URLs |
 

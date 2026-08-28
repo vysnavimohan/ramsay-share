@@ -31,7 +31,7 @@ If you deploy alongside the companion Shift-Cover demo, keep its catalog out of 
 | App `ramsay-ai-supervisor` (React + FastAPI) | `06_deploy_app` | `app.*` |
 | Dashboard "Ramsay Health — Group Operations (5 Hospitals)" | `04_build_dashboard` | `dashboard.id` / `.url` |
 | 4 Genie agents (Capacity · Patient Activity & Finance · Throughput & Flow · Workforce) | `05_build_genie` | `genie.GENIE_*.space_id` / `.url` |
-| Lakebase + `seed_questions` (optional) | `05b_provision_lakebase` | `lakebase.*` |
+| Lakebase instance + seeded chat history (required) | `05b_provision_lakebase` | `lakebase.*` |
 
 ### Genie agents (env var → title)
 | Env var | Title |
