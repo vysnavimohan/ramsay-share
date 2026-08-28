@@ -103,6 +103,23 @@ else:
 
 sp = app.get("service_principal_client_id")
 
+# 3a. give the app SP a Postgres role on the Lakebase instance so it can log in as itself
+#     (the app connects with PGUSER = its DATABRICKS_CLIENT_ID). Idempotent — ignore if it exists.
+_lb = manifest_get("lakebase", {})
+if _lb.get("applicable") and _lb.get("instance") and sp:
+    from databricks.sdk.service.database import (
+        DatabaseInstanceRole, DatabaseInstanceRoleIdentityType, DatabaseInstanceRoleMembershipRole)
+    try:
+        w.database.create_database_instance_role(
+            instance_name=_lb["instance"],
+            database_instance_role=DatabaseInstanceRole(
+                name=sp,
+                identity_type=DatabaseInstanceRoleIdentityType.SERVICE_PRINCIPAL,
+                membership_role=DatabaseInstanceRoleMembershipRole.DATABRICKS_SUPERUSER))
+        ok(f"granted Lakebase role to app SP on {_lb['instance']}")
+    except Exception as e:
+        print(f"    (warn) Lakebase role for SP (may already exist): {e}")
+
 # 3. grant SP BEFORE deploy
 for stmt in [f"GRANT USE CATALOG ON CATALOG {cat} TO `{sp}`",
              f"GRANT USE SCHEMA ON SCHEMA {cat}.{sch} TO `{sp}`",

@@ -5,9 +5,15 @@
 # MAGIC table, so Lakebase is a **required** part of this demo. The instance name comes from
 # MAGIC `00_preflight` (`lakebase_instance`, saved to `deploy_config.json`).
 # MAGIC
-# MAGIC This stage ensures a Lakebase project, connects to its production branch `databricks_postgres`,
-# MAGIC runs `seed_questions.sql` (4 rows), and records host/endpoint in the deployment manifest so
-# MAGIC Stage 06 can wire `PGHOST`. It **fails** if `lakebase_instance` was not set in preflight.
+# MAGIC This stage **creates the Lakebase Database Instance** (autoscaling) if it doesn't exist,
+# MAGIC connects to its `databricks_postgres` database, runs `seed_questions.sql` (4 rows), and records
+# MAGIC the instance name + host in the deployment manifest so Stage 06 can wire `PGHOST` /
+# MAGIC `LAKEBASE_INSTANCE`. It **fails** if `lakebase_instance` was not set in preflight.
+
+# COMMAND ----------
+
+# MAGIC %pip install "psycopg[binary]" --quiet
+# MAGIC %restart_python
 
 # COMMAND ----------
 
@@ -28,38 +34,36 @@ if not pid:
 # COMMAND ----------
 
 import psycopg
+from databricks.sdk.service.database import DatabaseInstance
+
 w = target_sql().w
 SEED_SQL = (PKG / "seed_questions.sql").read_text()
 
-db = w.database  # SDK database (Lakebase) API
+# The supervisor app (server/db.py) connects to a Lakebase **Database Instance** by name:
+# it mints creds via generate_database_credential(instance_names=[<name>]) and connects to the
+# instance's read-write DNS. So provision an autoscaling Database Instance named <pid> here.
+# (Autoscaling is a capacity mode of a Database Instance, not a separate API.)
+db = w.database
 
-# 1. ensure project
-projects = {p.name for p in db.list_database_instances()} if hasattr(db, "list_database_instances") else set()
-# The SDK surface for Lakebase Autoscaling projects evolves; we use the REST fallback for portability.
-def _rest(method, path, body=None):
-    return w.api_client.do(method, path, body=body)
+# 1. create the instance if it doesn't exist (idempotent — reuse when present)
+try:
+    inst = db.get_database_instance(name=pid)
+    ok(f"reusing existing Lakebase instance '{pid}' (state={inst.state})")
+except Exception:
+    ok(f"creating Lakebase instance '{pid}' (this can take a few minutes) …")
+    inst = db.create_database_instance_and_wait(
+        DatabaseInstance(name=pid, capacity="CU_1"))
+    ok(f"created Lakebase instance '{pid}' (state={inst.state})")
 
-existing = _rest("GET", "/api/2.0/database/projects").get("projects", [])
-names = {p.get("name") for p in existing}
-if f"projects/{pid}" in names:
-    ok(f"reusing existing project projects/{pid}")
-else:
-    _rest("POST", "/api/2.0/database/projects",
-          {"project_id": pid, "spec": {"display_name": f"Ramsay serving ({pid})"}})
-    ok(f"created project projects/{pid}")
-proj = f"projects/{pid}"
-branch = f"{proj}/branches/production"
+host = inst.read_write_dns
+if not host:
+    fail(f"instance '{pid}' has no read_write_dns yet — provisioning may still be finishing; re-run shortly")
 
-# 2. endpoint
-eps = _rest("GET", f"/api/2.0/database/{branch}/endpoints").get("endpoints", [])
-if not eps:
-    fail(f"no endpoint on {branch} — provisioning may still be starting; re-run shortly")
-ep = eps[0]["name"]
-host = _rest("GET", f"/api/2.0/database/{ep}")["status"]["hosts"]["host"]
-tok = _rest("POST", f"/api/2.0/database/{ep}/credentials")["token"]
+# 2. mint a short-lived Postgres credential for the instance (same call the app uses)
+tok = db.generate_database_credential(instance_names=[pid]).token
 user = w.current_user.me().user_name
 
-# 3. seed
+# 3. seed the starter prompts into databricks_postgres
 conn = psycopg.connect(host=host, user=user, password=tok, dbname="databricks_postgres", sslmode="require")
 with conn, conn.cursor() as cur:
     cur.execute(SEED_SQL)
@@ -68,5 +72,5 @@ with conn, conn.cursor() as cur:
 if n != 4:
     fail(f"seed_questions has {n} rows, expected 4")
 ok(f"seeded seed_questions ({n} rows)")
-manifest_put("lakebase", {"applicable": True, "project": proj, "branch": branch, "endpoint": ep, "host": host})
-print(f"\nStage 05b: Lakebase ready at {proj} ({host})")
+manifest_put("lakebase", {"applicable": True, "instance": pid, "host": host})
+print(f"\nStage 05b: Lakebase ready — instance '{pid}' at {host}")

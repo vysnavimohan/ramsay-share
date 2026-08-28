@@ -3,7 +3,7 @@
 # MAGIC # 99 — Teardown (remove everything this package created)
 # MAGIC Reverse order, each step guarded:
 # MAGIC - **app** → `app_name`
-# MAGIC - **Lakebase project** → from `deployment_manifest.json` (only if provisioned)
+# MAGIC - **Lakebase Database Instance** → from `deployment_manifest.json` (only if provisioned)
 # MAGIC - **4 Genie spaces** → ids from `deployment_manifest.json`
 # MAGIC - **dashboard** → id from `deployment_manifest.json`
 # MAGIC - **schema** → `DROP SCHEMA <catalog>.<schema> CASCADE` (drops the 23 objects + `_staging`)
@@ -40,17 +40,17 @@ except Exception as e:
     else:
         print(f"  (warn) could not delete app {name}: {e}")
 
-# 2. lakebase project (only if provisioned)
+# 2. lakebase Database Instance (only if provisioned)
 lb = manifest_get("lakebase", {})
-if lb.get("applicable") and lb.get("project"):
-    pid = lb["project"].split("/")[-1]
+if lb.get("applicable") and lb.get("instance"):
+    pid = lb["instance"]
     try:
-        w.api_client.do("DELETE", f"/api/2.0/database/projects/{pid}")
-        ok(f"deleted Lakebase project {pid}")
+        w.database.delete_database_instance(name=pid, purge=True)
+        ok(f"deleted Lakebase instance {pid}")
     except Exception as e:
-        print(f"  (warn) could not delete Lakebase project {pid}: {e}")
+        print(f"  (warn) could not delete Lakebase instance {pid}: {e}")
 else:
-    ok("no Lakebase project recorded — skipping")
+    ok("no Lakebase instance recorded — skipping")
 
 # 3. genie spaces (all 4)
 for env, a in manifest_get("genie", {}).items():
